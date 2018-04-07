@@ -19,6 +19,7 @@ program main
   use numbering_convention_defn
   use legendre_module
   use local_mat
+  use global_mat
   implicit none
 
   real(kind=dp), dimension(0:2) :: qnodes,qweights
@@ -45,15 +46,8 @@ program main
 
   write(*,*) test_node%neigh_elt_nos
   write(*,*) test_element%nodes%coord(1)
-  !write(*,*) bilinear_basis(0.0_dp,0.0_dp,2)
 
   call build_local_A(prob_data,num_data, A_local)
   call build_local_b(prob_data,num_data, test_element, b_local)
-
-  write(*,*) A_local(1,1)
-  write(*,*) b_local(1)
-  !call x_of_r(test_x,0.0_dp,test_element)
-  !call y_of_s(test_y,1.0_dp,test_element)
-  !write(*,*) matmul(x,transpose(w))
   
 end program main
