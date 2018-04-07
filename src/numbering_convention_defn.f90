@@ -68,6 +68,6 @@ contains
      solve_element%element_num = elt_num
      solve_element%nodes = temp_node
 
-     write(*,*) elt_num_x, elt_num_y
+     !write(*,*) elt_num_x, elt_num_y
   end function solve_element
 end module numbering_convention_defn
