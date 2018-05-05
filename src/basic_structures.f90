@@ -22,5 +22,4 @@ module basic_structures
      integer :: num_divs_x,num_divs_y,num_quadrature_nodes
   end type numerics_data
 !contains
-  
 end module basic_structures
