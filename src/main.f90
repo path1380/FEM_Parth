@@ -8,15 +8,17 @@
   PetscInt n,sz,i,j
   PetscErrorCode ierr
   PetscBool flg
-  PetscScalar zero,one,two,three,dot,a22
+  PetscScalar zero,pointone,one,two,three,dot,a22
   PetscReal norm,rdot
   Vec x,y,w,b
   Mat A
   KSP ksp
+  PC pc
   PetscOptions options
 
   n = 3
   zero = 0.0
+  pointone = 0.1
   one = 1.0
   two = 2.0
   three = 3.0
@@ -48,10 +50,12 @@
 
   do i=0,n-1
      do j=0,n-1
-        if (i <= j) then
+        if (i == j) then
            call MatSetValues(A,1,i,1,j,one,INSERT_VALUES,ierr)
-        else
+        else if (i > j) then
            call MatSetValues(A,1,i,1,j,zero,INSERT_VALUES,ierr)
+        else
+           call MatSetValues(A,1,i,1,j,pointone,INSERT_VALUES,ierr)
         end if
      end do
   end do
@@ -68,8 +72,14 @@
 
   call KSPSetType(ksp,KSPCG,ierr)
 
+  call KSPGetPC(ksp,pc,ierr)
+  call PCSetType(pc,PCJACOBI,ierr)
+
+  write(*,*) ierr
+
   call KSPSolve(ksp,b,x,ierr)
 
+  write(*,*) ierr
   call VecView(x,PETSC_VIEWER_STDOUT_SELF,ierr)
 
   !call KSPDestroy(ksp,ierr)
