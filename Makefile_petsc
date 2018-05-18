@@ -1,7 +1,7 @@
 # Makefile for FEM_Parth
 
-FC = gfortran
-LD = gfortran
+FC = mpif90
+LD = mpif90
 SRC = src
 BIN = bin
 F90FLAGS = -fbounds-check -Wall -fbacktrace -g
@@ -24,7 +24,7 @@ compile:
 	mv *.o $(BIN)
 
 build: $(OBJECTS)
-	$(LD) -o $(EXECUTABLE) $(OBJECTS) -llapack
+	$(LD) -o $(EXECUTABLE) $(OBJECTS) -llapack $(PETSC_LIB)
 
 run: $(EXECUTABLE)
 	mpirun -np 1 ./$(EXECUTABLE)
