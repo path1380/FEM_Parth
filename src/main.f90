@@ -5,7 +5,7 @@
   use petscvec
   implicit none
   
-  PetscInt n
+  PetscInt n,sz
   PetscErrorCode ierr
   PetscBool flg
   PetscScalar one,two,three,dot
@@ -20,9 +20,15 @@
 
   call MPI_Init(ierr)
   call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
+  call PetscOptionsCreate(options,ierr)
+  call PetscOptionsGetInt(options,PETSC_NULL_CHARACTER,'-n',n,flg,ierr)
+  call PetscOptionsDestroy(options,ierr)
 
-  !call PetscOptionsCreate(options,ierr)
-  !call VecCreate(PETSC_COMM_SELF,x,ierr)
+  call VecCreate(PETSC_COMM_SELF,x,ierr)
+  call VecSetSizes(x,PETSC_DECIDE,n,ierr)
+  call VecSetFromOptions(x,ierr)
+  call VecView(x,PETSC_VIEWER_STDOUT_WORLD,ierr)
+  !call VecGetSize(x,sz,ierr)
 
   write(*,*) "Program runs!"
 !contains
