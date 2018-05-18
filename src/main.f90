@@ -12,6 +12,7 @@
   PetscReal norm,rdot
   Vec x,y,w,b
   Mat A
+  KSP ksp
   PetscOptions options
 
   n = 2
@@ -30,6 +31,12 @@
   call VecSetSizes(b,PETSC_DECIDE,n,ierr)
   call VecSetFromOptions(b,ierr)
 
+  call VecDuplicate(b,x,ierr)
+
+  call VecSet(b,one,ierr)
+
+  !call VecView(b,PETSC_VIEWER_STDOUT_SELF,ierr)
+
   call MatCreate(PETSC_COMM_SELF,A,ierr)
   call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n,ierr)
   call MatSetFromOptions(A,ierr)
@@ -44,38 +51,21 @@
   call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
   call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 
-  call MatView(A,PETSC_VIEWER_STDOUT_SELF,ierr)
+  !call MatView(A,PETSC_VIEWER_STDOUT_SELF,ierr)
+  
+  call KSPCreate(PETSC_COMM_SELF,ksp,ierr)
+  call KSPSetFromOptions(ksp,ierr)
+  
+  call KSPSetOperators(ksp,A,A,ierr)
 
-  call MatScale(A,two,ierr)
+  call KSPSolve(ksp,b,x,ierr)
 
-  call MatView(A,PETSC_VIEWER_STDOUT_SELF,ierr)
+  call VecView(x,PETSC_VIEWER_STDOUT_SELF,ierr)
 
-  !call VecView(x,PETSC_VIEWER_STDOUT_WORLD,ierr)
-  !call VecGetSize(x,sz,ierr)
-  !call PetscIntView(1,sz,PETSC_VIEWER_STDOUT_WORLD,ierr)
-  !call VecDuplicate(b,y,ierr)
-  !call VecDuplicate(b,w,ierr)
-
-  !call VecSet(x,one,ierr)
-  !call VecSet(y,two,ierr)
-
-  !call VecDot(x,y,dot,ierr)
-  !rdot = PetscRealPart(dot)
-
-  !write(6,*) rdot
-
-  !call VecScale(x,two,ierr)
-
-  !call VecNorm(x,NORM_2,norm,ierr)
-
-  !call VecAXPY(y,three,x,ierr)
-
-  !call VecView(y,PETSC_VIEWER_STDOUT_WORLD,ierr)
-  !write(*,*) norm
-  !call VecView(x,PETSC_VIEWER_STDOUT_WORLD,ierr)
-  !call PetscScalarView(1,dot,PETSC_VIEWER_STDOUT_WORLD,ierr)
-  !call VecView(x,PETSC_VIEWER_STDOUT_WORLD,ierr)
-
+  call KSPDestroy(ksp,ierr)
+  call VecDestroy(b,ierr)
+  call VecDestroy(x,ierr)
+  call MatDestroy(A,ierr)
   write(*,*) "Program runs!"
 !contains
 
