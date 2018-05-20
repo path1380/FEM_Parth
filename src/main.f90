@@ -49,6 +49,7 @@ program main
 
 !Petsc variables
 
+  integer, allocatable, dimension(:) :: row_ind,col_ind
   PetscInt n
   PetscErrorCode ierr
   PetscBool flg
@@ -83,6 +84,14 @@ program main
   call PetscOptionsCreate(options,ierr)
   call PetscOptionsGetInt(options,PETSC_NULL_CHARACTER,'-n',num_nodes,flg,ierr)
   call PetscOptionsDestroy(options,ierr)
+
+  allocate(row_ind(0:num_nodes-1))
+  allocate(col_ind(0:num_nodes-1))
+
+  do i=0,num_nodes-1
+     row_ind(i) = i
+     col_ind(i) = i
+  end do
 
   !Creating Petsc Vectors b and soln
   call VecCreate(PETSC_COMM_SELF,b,ierr)
@@ -159,10 +168,19 @@ program main
 ! CODE USED TO CHECK ERROR AT POINTS OTHER THAN NODES
 
 !==============Using Petsc-ksp for solving=============
+  !write(*,*) A_global
 
   call VecCreateSeqWithArray(MPI_COMM_SELF,PETSC_DECIDE,num_nodes,b_global,b,ierr)
-  call VecView(b,PETSC_VIEWER_STDOUT_SELF,ierr)
-  write(*,*) b_global
+  !call VecView(b,PETSC_VIEWER_STDOUT_SELF,ierr)
+  !write(*,*) b_global
+  call MatSetValues(A,num_nodes,row_ind,num_nodes,col_ind,A_global,INSERT_VALUES,ierr)
+
+  call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+  call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+
+  !call MatView(A,PETSC_VIEWER_STDOUT_SELF,ierr)
+  !write(*,*) A_global(1,2)
+  
 !==============Using Petsc-ksp for solving=============
 
   do i=1,num_nodes
