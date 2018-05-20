@@ -168,19 +168,32 @@ program main
 ! CODE USED TO CHECK ERROR AT POINTS OTHER THAN NODES
 
 !==============Using Petsc-ksp for solving=============
-  write(*,*) A_global
+  !write(*,*) A_global
 
   call VecCreateSeqWithArray(MPI_COMM_SELF,PETSC_DECIDE,num_nodes,b_global,b,ierr)
   !call VecView(b,PETSC_VIEWER_STDOUT_SELF,ierr)
   !write(*,*) b_global
-  call MatSetValues(A,num_nodes,row_ind,num_nodes,col_ind,transpose(A_global),INSERT_VALUES,ierr)
 
+  call MatSetValues(A,num_nodes,row_ind,num_nodes,col_ind,transpose(A_global),INSERT_VALUES,ierr)
   call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
   call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 
-  call MatView(A,PETSC_VIEWER_STDOUT_SELF,ierr)
-  !write(*,*) A_global(1,2)
+  !call MatView(A,PETSC_VIEWER_STDOUT_SELF,ierr)
   
+  call KSPCreate(PETSC_COMM_SELF,ksp,ierr)
+  call KSPSetFromOptions(ksp,ierr)
+  
+  call KSPSetOperators(ksp,A,A,ierr)
+
+  call KSPSetType(ksp,KSPCG,ierr)
+
+  call KSPGetPC(ksp,pc,ierr)
+  call PCSetType(pc,PCJACOBI,ierr)
+
+  call KSPSolve(ksp,b,soln,ierr)
+
+  call VecView(b,PETSC_VIEWER_STDOUT_SELF,ierr)
+  write(*,*) b_global
 !==============Using Petsc-ksp for solving=============
 
   do i=1,num_nodes
