@@ -20,7 +20,7 @@ include $(PETSC_DIR)/lib/petsc/conf/rules
 
 
 compile:
-	$(FC) $(FFLAGS) -c $(SRCS)
+	$(FC) $(FFLAGS) -c $(SRCS) -g
 	mv *.mod $(BIN)
 	mv *.o $(BIN)
 
@@ -28,7 +28,7 @@ build: $(OBJECTS)
 	$(LD) -o $(EXECUTABLE) $(OBJECTS) -llapack $(PETSC_LIB)
 
 run: $(EXECUTABLE)
-	mpirun -np 1 ./$(EXECUTABLE) >> output.txt
+	mpirun -np 1 ./$(EXECUTABLE) >> output.txt 
 	
 clean::
 	rm -f $(OBJECTS) $(EXECUTABLE) $(BIN)/*.mod

@@ -60,6 +60,19 @@ program main
   PC pc
   PetscOptions options
 
+!=================Petsc Initializing=============================================
+  !Initializing MPI
+  call MPI_Init(ierr)
+
+  !Initializing Petsc
+  call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
+
+  call PetscOptionsCreate(options,ierr)
+  call PetscOptionsGetInt(options,PETSC_NULL_CHARACTER,'-n',num_nodes,flg,ierr)
+  !call PetscOptionsDestroy(options,ierr)
+!=================Petsc Initializing=============================================
+ 
+
   !Giving problem data input
   call Input_problem_data(prob_data_test)
 
@@ -75,16 +88,8 @@ program main
 
   n = num_nodes
 
-!=====================Petsc initializing and declarations==============
-  !Initializing MPI
-  call MPI_Init(ierr)
-
-  !Initializing Petsc
-  call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
-  call PetscOptionsCreate(options,ierr)
-  call PetscOptionsGetInt(options,PETSC_NULL_CHARACTER,'-n',num_nodes,flg,ierr)
-  call PetscOptionsDestroy(options,ierr)
-
+!=====================Petsc declarations========================================
+  
   allocate(row_ind(0:num_nodes-1))
   allocate(col_ind(0:num_nodes-1))
 
@@ -106,8 +111,8 @@ program main
   call MatSetFromOptions(A,ierr)
   call MatSetup(A,ierr)
 
-!=====================Petsc initializing and declarations==============
- 
+!=====================Petsc declarations========================================
+
   hx = length/num_divs_x
   hy = width/num_divs_y
 
@@ -149,10 +154,15 @@ program main
   !   write(*,*) b_global(i)
   !end do  
 
-  call DGETRF(num_nodes,num_nodes,A_global,num_nodes,IPIV,INFO)
-  call DGETRS('N',num_nodes,1,A_global,num_nodes,IPIV,b_global,num_nodes,INFO)
+  !===========================Solution using LAPACK============================
+
+  !call DGETRF(num_nodes,num_nodes,A_global,num_nodes,IPIV,INFO)
+  !call DGETRS('N',num_nodes,1,A_global,num_nodes,IPIV,b_global,num_nodes,INFO)
 
   !f_approx = approx_eval(0.2_dp,0.2_dp,b_global,prob_data_test,num_data_test)
+
+  !===========================Solution using LAPACK============================
+
 
   !write(*,*) f_approx
   
@@ -192,9 +202,14 @@ program main
 
   call KSPSolve(ksp,b,soln,ierr)
 
-  call VecView(b,PETSC_VIEWER_STDOUT_SELF,ierr)
-  write(*,*) b_global
+  !call KSPSetFromOptions(ksp,ierr)
+  
+
+  !call VecView(b,PETSC_VIEWER_STDOUT_SELF,ierr)
+  !write(*,*) b_global
 !==============Using Petsc-ksp for solving=============
+
+
 
   do i=1,num_nodes
      f_val(i) = 0.0_dp
@@ -205,4 +220,16 @@ program main
      f_val(i) = f(xi,yi)
   end do
   write(*,*) log(dble(num_divs_x)),log(maxval(abs(b_global - f_val)))
+
+!==============Destroying and Finalizing Petsc objects==
+
+  call KSPDestroy(ksp,ierr)
+  call MatDestroy(A,ierr)
+  call VecDestroy(b,ierr)
+  call VecDestroy(soln,ierr)
+  call PetscOptionsDestroy(options,ierr)
+
+  call PetscFinalize(ierr)
+
+!==============Destroying and Finalizing Petsc objects==
 end program main
