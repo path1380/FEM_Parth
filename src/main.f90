@@ -54,11 +54,17 @@ program main
   PetscErrorCode ierr
   PetscBool flg
   PetscOffset i_b,i_soln
+
   Vec b,soln
   Mat A
+
   KSP ksp
   PC pc
+
   PetscOptions options
+
+  PetscViewer viewer
+  PetscDraw draw
 
 !=================Petsc Initializing=============================================
   !Initializing MPI
@@ -110,6 +116,10 @@ program main
   call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n,ierr)
   call MatSetFromOptions(A,ierr)
   call MatSetup(A,ierr)
+
+  !Creating Petsc Viewer
+  call PetscViewerDrawOpen(PETSC_COMM_SELF,PETSC_NULL_CHARACTER,'Hello world!',&
+       &PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,viewer,ierr)
 
 !=====================Petsc declarations========================================
 
@@ -209,7 +219,11 @@ program main
   !write(*,*) b_global
 !==============Using Petsc-ksp for solving=============
 
+!======================Plotting using Petsc Viewer===============================
 
+  call PetscViewerDrawGetDraw(viewer,0,draw,ierr)
+
+!======================Plotting using Petsc Viewer===============================
 
   do i=1,num_nodes
      f_val(i) = 0.0_dp
