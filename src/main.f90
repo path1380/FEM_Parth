@@ -210,7 +210,9 @@ program main
   call KSPGetPC(ksp,pc,ierr)
   call PCSetType(pc,PCJACOBI,ierr)
 
-  call KSPSolve(ksp,b,soln,ierr)
+  !do
+    call KSPSolve(ksp,b,soln,ierr)
+  !end do
 
   !call KSPSetFromOptions(ksp,ierr)
   
@@ -233,7 +235,7 @@ program main
      yi = hy*(ny-1)
      f_val(i) = f(xi,yi)
   end do
-  write(*,*) log(dble(num_divs_x)),log(maxval(abs(b_global - f_val)))
+  !write(*,*) log(dble(num_divs_x)),log(maxval(abs(b_global - f_val)))
 
 !==============Destroying and Finalizing Petsc objects==
 
