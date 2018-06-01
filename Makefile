@@ -28,7 +28,7 @@ build: $(OBJECTS)
 	$(LD) -o $(EXECUTABLE) $(OBJECTS) -llapack $(PETSC_LIB)
 
 run: $(EXECUTABLE)
-	mpirun -np 1 ./$(EXECUTABLE) >> output.txt 
+	mpirun -np 2 ./$(EXECUTABLE) >> output.txt 
 	
 clean::
 	rm -f $(OBJECTS) $(EXECUTABLE) $(BIN)/*.mod

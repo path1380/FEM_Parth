@@ -42,6 +42,10 @@ program main
   integer :: i,nx,ny
   real(kind=dp) :: f_approx,xi,yi,hx,hy,length,width
 
+!MPI variables
+
+  integer :: nprocs,myid
+
 !LAPACK variables
 
   integer, allocatable, dimension(:) :: IPIV
@@ -67,11 +71,12 @@ program main
   PetscDraw draw
 
 !=================Petsc Initializing=============================================
-  !Initializing MPI
-  call MPI_Init(ierr)
-
   !Initializing Petsc
   call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
+
+  !Giving number of processors
+  call MPI_COMM_SIZE(PETSC_COMM_WORLD,nprocs,ierr)
+  call MPI_COMM_RANK(PETSC_COMM_WORLD,myid,ierr)
 
   call PetscOptionsCreate(options,ierr)
   call PetscOptionsGetInt(options,PETSC_NULL_CHARACTER,'-n',num_nodes,flg,ierr)
@@ -105,21 +110,21 @@ program main
   end do
 
   !Creating Petsc Vectors b and soln
-  call VecCreate(PETSC_COMM_SELF,b,ierr)
+  call VecCreate(PETSC_COMM_WORLD,b,ierr)
   call VecSetSizes(b,PETSC_DECIDE,n,ierr)
   call VecSetFromOptions(b,ierr)
 
   call VecDuplicate(b,soln,ierr)
 
   !Creating Petsc Matrix
-  call MatCreate(PETSC_COMM_SELF,A,ierr)
+  call MatCreate(PETSC_COMM_WORLD,A,ierr)
   call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n,ierr)
   call MatSetFromOptions(A,ierr)
   call MatSetup(A,ierr)
 
   !Creating Petsc Viewer
-  call PetscViewerDrawOpen(PETSC_COMM_SELF,PETSC_NULL_CHARACTER,'Hello world!',&
-       &PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,viewer,ierr)
+  !call PetscViewerDrawOpen(PETSC_COMM_WORLD,PETSC_NULL_CHARACTER,'Hello world!',&
+  !     &PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,viewer,ierr)
 
 !=====================Petsc declarations========================================
 
@@ -141,7 +146,7 @@ program main
   allocate(IPIV(num_nodes))
 
   !test_node = solve_node(1, prob_data_test, num_data)
-  test_element1 = solve_element(6, prob_data_test, num_data_test)
+  !test_element1 = solve_element(6, prob_data_test, num_data_test)
   !write(*,*) r(0.25_dp,test_element1)
   !write(*,*) s(0.8_dp,test_element1)
   !test_element2 = solve_element(2, prob_data_test, num_data_test)
@@ -190,9 +195,13 @@ program main
 !==============Using Petsc-ksp for solving=============
   !write(*,*) A_global
 
-  call VecCreateSeqWithArray(MPI_COMM_SELF,PETSC_DECIDE,num_nodes,b_global,b,ierr)
+  !call VecCreateSeqWithArray(PETSC_COMM_SELF,PETSC_DECIDE,num_nodes,b_global,b,ierr)
   !call VecView(b,PETSC_VIEWER_STDOUT_SELF,ierr)
   !write(*,*) b_global
+
+  call VecSetValues(b,num_nodes,col_ind,b_global,INSERT_VALUES,ierr)
+  call VecAssemblyBegin(b,ierr)
+  call VecAssemblyEnd(b,ierr)
 
   call MatSetValues(A,num_nodes,row_ind,num_nodes,col_ind,transpose(A_global),INSERT_VALUES,ierr)
   call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
@@ -200,7 +209,7 @@ program main
 
   !call MatView(A,PETSC_VIEWER_STDOUT_SELF,ierr)
   
-  call KSPCreate(PETSC_COMM_SELF,ksp,ierr)
+  call KSPCreate(PETSC_COMM_WORLD,ksp,ierr)
   call KSPSetFromOptions(ksp,ierr)
   
   call KSPSetOperators(ksp,A,A,ierr)
@@ -223,7 +232,7 @@ program main
 
 !======================Plotting using Petsc Viewer===============================
 
-  call PetscViewerDrawGetDraw(viewer,0,draw,ierr)
+  !call PetscViewerDrawGetDraw(viewer,0,draw,ierr)
 
 !======================Plotting using Petsc Viewer===============================
 

@@ -13,8 +13,8 @@ contains
 
    subroutine Input_numerics_data(num_data)
       type(numerics_data) :: num_data
-      num_data_test%num_divs_x = 32
-      num_data_test%num_divs_y = 32
+      num_data_test%num_divs_x = 30
+      num_data_test%num_divs_y = 30
       num_data_test%num_quadrature_nodes = 3
    end subroutine Input_numerics_data
    
