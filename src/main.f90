@@ -324,10 +324,17 @@ program main
 
 !==============Destroying and Finalizing Petsc objects==
 
-  !call KSPDestroy(ksp,ierr)
+  call KSPDestroy(ksp,ierr)
+  call KSPDestroy(ksp_iter,ierr)
   call MatDestroy(A,ierr)
   call VecDestroy(b,ierr)
   call VecDestroy(soln,ierr)
+  call VecDestroy(soln_iter,ierr)
+  call VecDestroy(b_newton,ierr)
+  call VecDestroy(soln_init,ierr)
+  call VecDestroy(delta_u,ierr)
+  call VecDestroy(soln_prev,ierr)
+  call VecDestroy(temp_vec,ierr)
   call PetscOptionsDestroy(options,ierr)
 
   call PetscFinalize(ierr)
