@@ -67,7 +67,6 @@ program main
   KSP ksp,ksp_iter
   PC pc
 
-  PetscOptions options
 
   PetscViewer viewer
   PetscDraw draw
@@ -80,9 +79,7 @@ program main
   call MPI_COMM_SIZE(PETSC_COMM_WORLD,nprocs,ierr)
   call MPI_COMM_RANK(PETSC_COMM_WORLD,myid,ierr)
 
-  call PetscOptionsCreate(options,ierr)
-  call PetscOptionsGetInt(options,PETSC_NULL_CHARACTER,'-n',num_nodes,flg,ierr)
-  !call PetscOptionsDestroy(options,ierr)
+  call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-n',num_nodes,flg,ierr)
 !=================Petsc Initializing=============================================
  
 
@@ -335,7 +332,6 @@ program main
   call VecDestroy(delta_u,ierr)
   call VecDestroy(soln_prev,ierr)
   call VecDestroy(temp_vec,ierr)
-  call PetscOptionsDestroy(options,ierr)
 
   call PetscFinalize(ierr)
 
