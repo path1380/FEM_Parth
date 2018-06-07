@@ -291,7 +291,7 @@ program main
      call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
 
      n_iter_newton = n_iter_newton + 1
-     write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
+     !write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
   end do
 
   call VecCreate(PETSC_COMM_WORLD,temp_vec,ierr)
@@ -299,7 +299,9 @@ program main
   call VecSetFromOptions(temp_vec,ierr)
   call VecWAXPY(temp_vec,-1.0_dp,soln,soln_iter,ierr)
   call VecNorm(temp_vec,NORM_INFINITY,temp_norm,ierr)
-  write(*,*) 'Infinity norm of difference between direct and iterative solution is',temp_norm
+  !write(*,*) 'Infinity norm of difference between direct and iterative solution is',temp_norm
+
+  call VecGetValues(soln_iter,num_nodes,col_ind,b_global,ierr)
 
 !===========Solving linear system iteratively====================================
 
@@ -317,7 +319,7 @@ program main
      yi = hy*(ny-1)
      f_val(i) = f(xi,yi)
   end do
-  !write(*,*) log(dble(num_divs_x)),log(maxval(abs(b_global - f_val)))
+  write(*,*) log(dble(num_divs_x)),log(maxval(abs(b_global - f_val)))
 
 !==============Destroying and Finalizing Petsc objects==
 

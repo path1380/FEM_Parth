@@ -36,4 +36,4 @@ run: $(EXECUTABLE)
 
 clean::
 	rm -f $(OBJECTS) $(EXECUTABLE) $(BIN)/*.mod
-	rm -f *.o *.mod *.txt
+	rm -f *.o *.mod
