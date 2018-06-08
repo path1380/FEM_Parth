@@ -39,7 +39,7 @@ program main
   type(node) :: test_node
   type(element) :: test_element,test_element1,test_element2,test_element3,test_element4
 
-  integer :: i,nx,ny
+  integer :: i,nx,ny,big_loop_variable
   real(kind=dp) :: f_approx,xi,yi,hx,hy,length,width
 
 !MPI variables
@@ -92,42 +92,52 @@ program main
   !Giving numerics data input
   call Input_numerics_data(num_data_test)
 
-  num_divs_x = num_data_test%num_divs_x
-  num_divs_y = num_data_test%num_divs_y
-  num_nodes = (num_divs_x+1)*(num_divs_y+1)
+!BIG LOOP FOR POST-PROCESSING
 
-  n = num_nodes
+  big_loop_variable = 2
+
+  do while(big_loop_variable <= 200)
+
+     num_data_test%num_divs_x = big_loop_variable
+     num_data_test%num_divs_y = big_loop_variable
+
+     num_divs_x = num_data_test%num_divs_x
+     num_divs_y = num_data_test%num_divs_y
+
+     num_nodes = (num_divs_x+1)*(num_divs_y+1)
+
+     n = num_nodes
 
 !=====================Petsc declarations========================================
   
-  allocate(row_ind(0:num_nodes-1))
-  allocate(col_ind(0:num_nodes-1))
+     allocate(row_ind(0:num_nodes-1))
+     allocate(col_ind(0:num_nodes-1))
 
-  do i=0,num_nodes-1
-     row_ind(i) = i
-     col_ind(i) = i
-  end do
+     do i=0,num_nodes-1
+        row_ind(i) = i
+        col_ind(i) = i
+     end do
 
   !Creating Petsc Vectors b and soln
-  call VecCreate(PETSC_COMM_WORLD,b,ierr)
-  call VecSetSizes(b,PETSC_DECIDE,n,ierr)
-  call VecSetFromOptions(b,ierr)
+     call VecCreate(PETSC_COMM_WORLD,b,ierr)
+     call VecSetSizes(b,PETSC_DECIDE,n,ierr)
+     call VecSetFromOptions(b,ierr)
 
-  call VecDuplicate(b,soln,ierr)
+     call VecDuplicate(b,soln,ierr)
 
   !Creating vectors for iterative solution
-  call VecDuplicate(b,soln_iter,ierr)
-  call VecDuplicate(b,b_newton,ierr)
-  call VecDuplicate(b,soln_init,ierr)
-  call VecDuplicate(b,delta_u,ierr)
-  call VecDuplicate(b,soln_prev,ierr)
+     call VecDuplicate(b,soln_iter,ierr)
+     call VecDuplicate(b,b_newton,ierr)
+     call VecDuplicate(b,soln_init,ierr)
+     call VecDuplicate(b,delta_u,ierr)
+     call VecDuplicate(b,soln_prev,ierr)
   !call VecDuplicate(b,temp_vec,ierr)
 
   !Creating Petsc Matrix
-  call MatCreate(PETSC_COMM_WORLD,A,ierr)
-  call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n,ierr)
-  call MatSetFromOptions(A,ierr)
-  call MatSetup(A,ierr)
+     call MatCreate(PETSC_COMM_WORLD,A,ierr)
+     call MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n,ierr)
+     call MatSetFromOptions(A,ierr)
+     call MatSetup(A,ierr)
 
   !Creating Petsc Viewer
   !call PetscViewerDrawOpen(PETSC_COMM_WORLD,PETSC_NULL_CHARACTER,'Hello world!',&
@@ -135,22 +145,22 @@ program main
 
 !=====================Petsc declarations========================================
 
-  hx = length/num_divs_x
-  hy = width/num_divs_y
+     hx = length/num_divs_x
+     hy = width/num_divs_y
 
   !Allocating Global matrices
-  allocate(A_global(num_nodes,num_nodes))
+     allocate(A_global(num_nodes,num_nodes))
 
-  allocate(b_global(num_nodes))
-  allocate(qnodes(0:num_data_test%num_quadrature_nodes-1))
-  allocate(qweights(0:num_data_test%num_quadrature_nodes-1))
+     allocate(b_global(num_nodes))
+     allocate(qnodes(0:num_data_test%num_quadrature_nodes-1))
+     allocate(qweights(0:num_data_test%num_quadrature_nodes-1))
 
-  allocate(b_test(num_nodes))
+     allocate(b_test(num_nodes))
 
-  allocate(f_val(num_nodes))
+     allocate(f_val(num_nodes))
   
 
-  allocate(IPIV(num_nodes))
+     allocate(IPIV(num_nodes))
 
   !test_node = solve_node(1, prob_data_test, num_data)
   !test_element1 = solve_element(6, prob_data_test, num_data_test)
@@ -165,7 +175,7 @@ program main
 
   !call build_local_A(prob_data_test,num_data_test, A_local)
 
-  call build_global_matrices(A_global, b_global, prob_data_test, num_data_test)
+     call build_global_matrices(A_global, b_global, prob_data_test, num_data_test)
 
   !write(*,*) nint
   !write(*,*) A_global - transpose(A_global)
@@ -209,40 +219,40 @@ program main
 !=============Assigning values to vectors and Matrix===========================
 
   !Assigning values to RHS of linear system (Direct solution)
-  call VecSetValues(b,num_nodes,col_ind,b_global,INSERT_VALUES,ierr)
-  call VecAssemblyBegin(b,ierr)
-  call VecAssemblyEnd(b,ierr)
+     call VecSetValues(b,num_nodes,col_ind,b_global,INSERT_VALUES,ierr)
+     call VecAssemblyBegin(b,ierr)
+     call VecAssemblyEnd(b,ierr)
 
   !Assigning values to Matrix of linear system
-  call MatSetValues(A,num_nodes,row_ind,num_nodes,col_ind,transpose(A_global),INSERT_VALUES,ierr)
-  call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
-  call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
+     call MatSetValues(A,num_nodes,row_ind,num_nodes,col_ind,transpose(A_global),INSERT_VALUES,ierr)
+     call MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY,ierr)
+     call MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY,ierr)
 
   !Assigning values to Parameters (Iterative solution)
-  call VecSet(soln_init,0.0_dp,ierr)
-  call VecAssemblyBegin(soln_init,ierr)
-  call VecAssemblyEnd(soln_init,ierr)
+     call VecSet(soln_init,0.0_dp,ierr)
+     call VecAssemblyBegin(soln_init,ierr)
+     call VecAssemblyEnd(soln_init,ierr)
   !call VecView(soln_init,PETSC_VIEWER_STDOUT_WORLD,ierr)
   !call MatView(A,PETSC_VIEWER_STDOUT_SELF,ierr)
 
-  call VecCopy(soln_init,soln_iter,ierr)
+     call VecCopy(soln_init,soln_iter,ierr)
 
-  call VecSet(delta_u,1.0_dp,ierr)
+     call VecSet(delta_u,1.0_dp,ierr)
   
 !===========Solving linear system directly=======================================
 
-  call KSPCreate(PETSC_COMM_WORLD,ksp,ierr)
-  call KSPSetFromOptions(ksp,ierr)
+     call KSPCreate(PETSC_COMM_WORLD,ksp,ierr)
+     call KSPSetFromOptions(ksp,ierr)
   
-  call KSPSetOperators(ksp,A,A,ierr)
+     call KSPSetOperators(ksp,A,A,ierr)
 
-  call KSPSetType(ksp,KSPCG,ierr)
+     call KSPSetType(ksp,KSPCG,ierr)
 
-  call KSPGetPC(ksp,pc,ierr)
-  call PCSetType(pc,PCJACOBI,ierr)
+     call KSPGetPC(ksp,pc,ierr)
+     call PCSetType(pc,PCJACOBI,ierr)
 
   !do
-    call KSPSolve(ksp,b,soln,ierr)
+       call KSPSolve(ksp,b,soln,ierr)
   !end do
 
   !call KSPSetFromOptions(ksp,ierr)
@@ -255,53 +265,53 @@ program main
 
 !===========Solving linear system iteratively====================================
 
-  call KSPCreate(PETSC_COMM_WORLD,ksp_iter,ierr)
-  call KSPSetFromOptions(ksp_iter,ierr)
+     call KSPCreate(PETSC_COMM_WORLD,ksp_iter,ierr)
+     call KSPSetFromOptions(ksp_iter,ierr)
 
-  call KSPSetOperators(ksp_iter,A,A,ierr)
-  call KSPSetType(ksp_iter,KSPCG,ierr)
+     call KSPSetOperators(ksp_iter,A,A,ierr)
+     call KSPSetType(ksp_iter,KSPCG,ierr)
 
-  call KSPGetPC(ksp_iter,pc,ierr)
-  call PCSetType(pc,PCJACOBI,ierr)
+     call KSPGetPC(ksp_iter,pc,ierr)
+     call PCSetType(pc,PCJACOBI,ierr)
 
-  call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
-
-  !Performing scaling outside the loop so that it doesn't repeat inside
-  call VecScale(b,-1.0_dp,ierr)
-
-  tol = 1e-4
-
-  n_iter_newton = 0
-
-  do while (norm_delta_u > tol)
-     !Copying soln of previous iteration to soln_prev
-     call VecCopy(soln_iter,soln_prev,ierr)
-
-     !Performing the operation b_newton = - b + A*soln_prev
-     call MatMultAdd(A,soln_prev,b,b_newton,ierr)
-     
-
-     !Performing the solve for delta_u
-     call KSPSolve(ksp_iter,b_newton,delta_u,ierr)
-
-     !Calculating soln = soln_prev - delta_u
-     call VecWAXPY(soln_iter,-1.0_dp,delta_u,soln_prev,ierr)
-
-     !Calculating norm of delta_u
      call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
 
-     n_iter_newton = n_iter_newton + 1
-     !write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
-  end do
+  !Performing scaling outside the loop so that it doesn't repeat inside
+     call VecScale(b,-1.0_dp,ierr)
 
-  call VecCreate(PETSC_COMM_WORLD,temp_vec,ierr)
-  call VecSetSizes(temp_vec,PETSC_DECIDE,n,ierr)
-  call VecSetFromOptions(temp_vec,ierr)
-  call VecWAXPY(temp_vec,-1.0_dp,soln,soln_iter,ierr)
-  call VecNorm(temp_vec,NORM_INFINITY,temp_norm,ierr)
-  !write(*,*) 'Infinity norm of difference between direct and iterative solution is',temp_norm
+     tol = 1e-4
 
-  call VecGetValues(soln_iter,num_nodes,col_ind,b_global,ierr)
+     n_iter_newton = 0
+
+     do while (norm_delta_u > tol)
+        !Copying soln of previous iteration to soln_prev
+        call VecCopy(soln_iter,soln_prev,ierr)
+
+        !Performing the operation b_newton = - b + A*soln_prev
+        call MatMultAdd(A,soln_prev,b,b_newton,ierr)
+     
+
+        !Performing the solve for delta_u
+        call KSPSolve(ksp_iter,b_newton,delta_u,ierr)
+
+        !Calculating soln = soln_prev - delta_u
+        call VecWAXPY(soln_iter,-1.0_dp,delta_u,soln_prev,ierr)
+
+        !Calculating norm of delta_u
+        call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
+
+        n_iter_newton = n_iter_newton + 1
+        !write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
+     end do
+
+     call VecCreate(PETSC_COMM_WORLD,temp_vec,ierr)
+     call VecSetSizes(temp_vec,PETSC_DECIDE,n,ierr)
+     call VecSetFromOptions(temp_vec,ierr)
+     call VecWAXPY(temp_vec,-1.0_dp,soln,soln_iter,ierr)
+     call VecNorm(temp_vec,NORM_INFINITY,temp_norm,ierr)
+     !write(*,*) 'Infinity norm of difference between direct and iterative solution is',temp_norm
+
+     call VecGetValues(soln_iter,num_nodes,col_ind,b_global,ierr)
 
 !===========Solving linear system iteratively====================================
 
@@ -311,29 +321,47 @@ program main
 
 !======================Plotting using Petsc Viewer===============================
 
-  do i=1,num_nodes
-     f_val(i) = 0.0_dp
-     ny = num_divs_y+1-mod(i-1,num_divs_y+1)
-     nx = 1 + ((i-1)/(num_divs_y+1))
-     xi = hx*(nx-1)
-     yi = hy*(ny-1)
-     f_val(i) = f(xi,yi)
-  end do
-  write(*,*) log(dble(num_divs_x)),log(maxval(abs(b_global - f_val)))
+     do i=1,num_nodes
+        f_val(i) = 0.0_dp
+        ny = num_divs_y+1-mod(i-1,num_divs_y+1)
+        nx = 1 + ((i-1)/(num_divs_y+1))
+        xi = hx*(nx-1)
+        yi = hy*(ny-1)
+        f_val(i) = f(xi,yi)
+     end do
+     write(*,*) log(dble(num_divs_x)),log(maxval(abs(b_global - f_val))) 
+
+!==============Deallocating Array Memory========================================
+
+     deallocate(row_ind)
+     deallocate(col_ind)
+     deallocate(A_global)
+     deallocate(b_global)
+     deallocate(qnodes)
+     deallocate(qweights)
+     deallocate(b_test)
+     deallocate(f_val)
+     deallocate(IPIV)
+
+!==============Deallocating Array Memory========================================
 
 !==============Destroying and Finalizing Petsc objects==
 
-  call KSPDestroy(ksp,ierr)
-  call KSPDestroy(ksp_iter,ierr)
-  call MatDestroy(A,ierr)
-  call VecDestroy(b,ierr)
-  call VecDestroy(soln,ierr)
-  call VecDestroy(soln_iter,ierr)
-  call VecDestroy(b_newton,ierr)
-  call VecDestroy(soln_init,ierr)
-  call VecDestroy(delta_u,ierr)
-  call VecDestroy(soln_prev,ierr)
-  call VecDestroy(temp_vec,ierr)
+     call KSPDestroy(ksp,ierr)
+     call KSPDestroy(ksp_iter,ierr)
+     call MatDestroy(A,ierr)
+     call VecDestroy(b,ierr)
+     call VecDestroy(soln,ierr)
+     call VecDestroy(soln_iter,ierr)
+     call VecDestroy(b_newton,ierr)
+     call VecDestroy(soln_init,ierr)
+     call VecDestroy(delta_u,ierr)
+     call VecDestroy(soln_prev,ierr)
+     call VecDestroy(temp_vec,ierr)
+
+     big_loop_variable = big_loop_variable*2
+
+  end do
 
   call PetscFinalize(ierr)
 
