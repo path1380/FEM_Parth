@@ -24,6 +24,7 @@ program main
   use rs_to_xy
   use approx_fun
   use petsc
+  use solver_context_interfaces
   implicit none
 
   real(kind=dp), allocatable, dimension(:) :: qnodes,qweights
@@ -61,8 +62,11 @@ program main
   PetscOffset i_b,i_soln
   PetscScalar tol,norm_delta_u,temp_norm
 
+  TYPE(MatCtx) :: ctxA
+  TYPE(MatCtx),POINTER :: ctxA_pt
+
   Vec b,soln,soln_iter,b_newton,soln_init,delta_u,soln_prev,temp_vec
-  Mat A
+  Mat A,A_local_petsc
 
   KSP ksp,ksp_iter
   PC pc
@@ -91,6 +95,28 @@ program main
 
   !Giving numerics data input
   call Input_numerics_data(num_data_test)
+
+!===========Testing build_local_A_petsc==================================
+
+  call MatCreate(PETSC_COMM_WORLD,A_local_petsc,ierr)
+  call MatSetSizes(A_local_petsc,PETSC_DECIDE,PETSC_DECIDE,4,4,ierr)
+  call MatSetFromOptions(A_local_petsc,ierr)
+  call MatSetup(A_local_petsc,ierr)
+
+  call build_local_A_petsc(prob_data_test,num_data_test, A_local_petsc)
+
+  call MatAssemblyBegin(A_local_petsc,MAT_FINAL_ASSEMBLY,ierr)
+  call MatAssemblyEnd(A_local_petsc,MAT_FINAL_ASSEMBLY,ierr)
+
+  call MatView(A_local_petsc,PETSC_VIEWER_STDOUT_WORLD,ierr)
+
+  call build_local_A(prob_data_test,num_data_test, A_local)
+
+  do i=1,4
+     write(*,*) A_local(i,:)
+  end do
+
+  stop 123
 
 !BIG LOOP FOR POST-PROCESSING
 
@@ -172,8 +198,6 @@ program main
 
   !write(*,*) test_node%neigh_elt_nos
   !write(*,*) test_element%nodes%coord(1)
-
-  !call build_local_A(prob_data_test,num_data_test, A_local)
 
      call build_global_matrices(A_global, b_global, prob_data_test, num_data_test)
 

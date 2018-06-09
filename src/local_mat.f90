@@ -1,10 +1,12 @@
 module local_mat
+#include <petsc/finclude/petsc.h>
   use type_defs
   use basic_structures
   use numbering_convention_defn
   use legendre_module
   use basis_function
   use Input_function
+  use petsc
   implicit none
 contains
 
@@ -97,4 +99,40 @@ contains
         end do
      end do
   end subroutine build_local_b
+
+!========================Same routines returning petsc objects=====================
+
+  subroutine build_local_A_petsc(prob_data, num_data, A_local_petsc)
+     type(problem_data) :: prob_data
+     type(numerics_data) :: num_data
+
+     !Petsc Variables
+     Mat A_local_petsc
+     PetscScalar ierr
+
+     integer :: nq,i,j,k,l
+     real(kind=dp), dimension(0:num_data%num_quadrature_nodes) :: qnodes,qweights
+     real(kind=dp) :: temp_val
+ 
+
+     nq = num_data%num_quadrature_nodes
+
+     call lglnodes(qnodes,qweights,nq)
+
+     do j=0,3
+        do i=0,3
+           temp_val = 0.0_dp
+           do k=0,nq
+              do l=0,nq
+                 temp_val = temp_val + (qweights(k)*qweights(l)*bilinear_basis(qnodes(k),&
+                            qnodes(l),i+1)*bilinear_basis(qnodes(k),qnodes(l),j+1)*&
+                            Jacobian(prob_data,num_data))
+              end do
+           end do
+           call MatSetValue(A_local_petsc,i,j,temp_val,INSERT_VALUES,ierr)
+        end do
+     end do
+
+  end subroutine build_local_A_petsc
+
 end module local_mat
