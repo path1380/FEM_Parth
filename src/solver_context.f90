@@ -4,8 +4,7 @@ module solver_context
   use petsc
   implicit none
   TYPE MatCtx
-     PetscReal :: lambda,kappa
-     PetscReal :: h
+     real(kind=dp), dimension(4,4) :: local_matrix
   END TYPE MatCtx
 
 end module solver_context

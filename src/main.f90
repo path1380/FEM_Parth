@@ -66,7 +66,7 @@ program main
   TYPE(MatCtx),POINTER :: ctxA_pt
 
   Vec b,soln,soln_iter,b_newton,soln_init,delta_u,soln_prev,temp_vec
-  Mat A,A_local_petsc
+  Mat A,A_local_petsc,A_global_shell
 
   KSP ksp,ksp_iter
   PC pc
@@ -98,23 +98,38 @@ program main
 
 !===========Testing build_local_A_petsc==================================
 
-  call MatCreate(PETSC_COMM_WORLD,A_local_petsc,ierr)
-  call MatSetSizes(A_local_petsc,PETSC_DECIDE,PETSC_DECIDE,4,4,ierr)
-  call MatSetFromOptions(A_local_petsc,ierr)
-  call MatSetup(A_local_petsc,ierr)
+  !call MatCreateShell(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,4,4,&
+  !                   &PETSC_NULL_INTEGER,A_local_petsc,ierr)
 
-  call build_local_A_petsc(prob_data_test,num_data_test, A_local_petsc)
+  !call MatCreate(PETSC_COMM_WORLD,A_local_petsc,ierr)
+  !call MatSetSizes(A_local_petsc,PETSC_DECIDE,PETSC_DECIDE,4,4,ierr)
+  !call MatSetFromOptions(A_local_petsc,ierr)
+  !call MatSetType(A_local_petsc,MATSHELL,ierr)
+  !call MatSetup(A_local_petsc,ierr)
 
-  call MatAssemblyBegin(A_local_petsc,MAT_FINAL_ASSEMBLY,ierr)
-  call MatAssemblyEnd(A_local_petsc,MAT_FINAL_ASSEMBLY,ierr)
+  !call build_local_A_petsc(prob_data_test,num_data_test, A_local_petsc)
 
-  call MatView(A_local_petsc,PETSC_VIEWER_STDOUT_WORLD,ierr)
+  !call MatAssemblyBegin(A_local_petsc,MAT_FINAL_ASSEMBLY,ierr)
+  !call MatAssemblyEnd(A_local_petsc,MAT_FINAL_ASSEMBLY,ierr)
+
+  !call MatView(A_local_petsc,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
   call build_local_A(prob_data_test,num_data_test, A_local)
 
-  do i=1,4
-     write(*,*) A_local(i,:)
-  end do
+  ctxA%local_matrix = A_local
+
+  call MatCreateShell(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,&
+       &num_nodes,num_nodes,ctxA,A_global_shell,ierr)
+
+  call MatShellSetContext(A_global_shell,ctxA,ierr)
+
+  call MatShellGetContext(A_global_shell,ctxA_pt,ierr)
+
+  write(*,*) ctxA_pt%local_matrix
+
+  !do i=1,4
+  !   write(*,*) A_local(i,:)
+  !end do
 
   stop 123
 
