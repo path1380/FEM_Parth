@@ -65,7 +65,7 @@ program main
   TYPE(MatCtx) :: ctxA
   TYPE(MatCtx),POINTER :: ctxA_pt
 
-  Vec b,soln,soln_iter,b_newton,soln_init,delta_u,soln_prev,temp_vec
+  Vec b,soln,soln_iter,b_newton,soln_init,delta_u,soln_prev,temp_vec,temp_op_arg,temp_ret_val
   Mat A,A_local_petsc,A_global_shell
 
   KSP ksp,ksp_iter
@@ -117,11 +117,55 @@ program main
   call build_local_A(prob_data_test,num_data_test, A_local)
 
   ctxA%local_matrix = A_local
+  ctxA%prob = prob_data_test
+  ctxA%num = num_data_test
 
   call MatCreateShell(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,&
        &num_nodes,num_nodes,ctxA,A_global_shell,ierr)
 
   call MatShellSetContext(A_global_shell,ctxA,ierr)
+
+!=========Testing the matrix multiplication operation definition=============
+
+  num_divs_x = num_data_test%num_divs_x
+  num_divs_y = num_data_test%num_divs_y
+
+  num_nodes = (num_divs_x+1)*(num_divs_y+1)
+
+  allocate(row_ind(0:num_nodes-1))
+
+  call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
+  call VecSetSizes(temp_op_arg,PETSC_DECIDE,num_nodes,ierr)
+  call VecSetFromOptions(temp_op_arg,ierr)
+
+  call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
+
+  do i=0,num_nodes-1
+
+     call VecSetValue(temp_op_arg,i,1.0_dp,INSERT_VALUES,ierr)
+
+     call VecAssemblyBegin(temp_op_arg,ierr)
+     call VecAssemblyEnd(temp_op_arg,ierr)
+
+     call MyMult(A_global_shell,temp_op_arg,temp_ret_val,ierr)
+
+     call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
+
+     call VecSet(temp_op_arg,0.0_dp,ierr)
+     call VecSet(temp_ret_val,0.0_dp,ierr)
+
+  end do
+
+  allocate(A_global(num_nodes,num_nodes))
+  allocate(b_global(num_nodes))
+
+  call build_global_matrices(A_global, b_global, prob_data_test, num_data_test)
+
+  do i=1,num_nodes
+     write(*,*) A_global(i,:)
+  end do
+
+!=========Testing the matrix multiplication operation definition=============
 
   !call MatShellGetContext(A_global_shell,ctxA_pt,ierr)
 
