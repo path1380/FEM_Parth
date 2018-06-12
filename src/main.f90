@@ -123,9 +123,9 @@ program main
 
   call MatShellSetContext(A_global_shell,ctxA,ierr)
 
-  call MatShellGetContext(A_global_shell,ctxA_pt,ierr)
+  !call MatShellGetContext(A_global_shell,ctxA_pt,ierr)
 
-  write(*,*) ctxA_pt%local_matrix
+  !write(*,*) ctxA_pt%local_matrix
 
   !do i=1,4
   !   write(*,*) A_local(i,:)
