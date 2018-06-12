@@ -33,7 +33,7 @@ program main
   real(kind=dp) :: test_x,test_y
   
   real(kind=dp), allocatable, dimension(:,:) :: A_global  
-  real(kind=dp), allocatable, dimension(:) :: b_global,b_test,f_val
+  real(kind=dp), allocatable, dimension(:) :: b_global,b_test,f_val,b_global_shell
 
   integer :: num_divs_x,num_divs_y,num_nodes
   
@@ -125,45 +125,47 @@ program main
 
   call MatShellSetContext(A_global_shell,ctxA,ierr)
 
+  call MatShellSetOperation(A_global_shell,MATOP_MULT,MyMult,ierr)
+
 !=========Testing the matrix multiplication operation definition=============
 
-  num_divs_x = num_data_test%num_divs_x
-  num_divs_y = num_data_test%num_divs_y
+!  num_divs_x = num_data_test%num_divs_x
+!  num_divs_y = num_data_test%num_divs_y
 
-  num_nodes = (num_divs_x+1)*(num_divs_y+1)
+!  num_nodes = (num_divs_x+1)*(num_divs_y+1)
 
-  allocate(row_ind(0:num_nodes-1))
+!  allocate(row_ind(0:num_nodes-1))
 
-  call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
-  call VecSetSizes(temp_op_arg,PETSC_DECIDE,num_nodes,ierr)
-  call VecSetFromOptions(temp_op_arg,ierr)
+!  call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
+!  call VecSetSizes(temp_op_arg,PETSC_DECIDE,num_nodes,ierr)
+!  call VecSetFromOptions(temp_op_arg,ierr)
 
-  call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
+!  call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
 
-  do i=0,num_nodes-1
+!  do i=0,num_nodes-1
 
-     call VecSetValue(temp_op_arg,i,1.0_dp,INSERT_VALUES,ierr)
+!     call VecSetValue(temp_op_arg,i,1.0_dp,INSERT_VALUES,ierr)
 
-     call VecAssemblyBegin(temp_op_arg,ierr)
-     call VecAssemblyEnd(temp_op_arg,ierr)
+!     call VecAssemblyBegin(temp_op_arg,ierr)
+!     call VecAssemblyEnd(temp_op_arg,ierr)
 
-     call MyMult(A_global_shell,temp_op_arg,temp_ret_val,ierr)
+!     call MyMult(A_global_shell,temp_op_arg,temp_ret_val,ierr)
 
-     call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
+!     call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
-     call VecSet(temp_op_arg,0.0_dp,ierr)
-     call VecSet(temp_ret_val,0.0_dp,ierr)
+!     call VecSet(temp_op_arg,0.0_dp,ierr)
+!     call VecSet(temp_ret_val,0.0_dp,ierr)
 
-  end do
+!  end do
 
-  allocate(A_global(num_nodes,num_nodes))
-  allocate(b_global(num_nodes))
+!  allocate(A_global(num_nodes,num_nodes))
+! allocate(b_global(num_nodes))
 
-  call build_global_matrices(A_global, b_global, prob_data_test, num_data_test)
+!  call build_global_matrices(A_global, b_global, prob_data_test, num_data_test)
 
-  do i=1,num_nodes
-     write(*,*) A_global(i,:)
-  end do
+!  do i=1,num_nodes
+!     write(*,*) A_global(i,:)
+!  end do
 
 !=========Testing the matrix multiplication operation definition=============
 
@@ -175,16 +177,18 @@ program main
   !   write(*,*) A_local(i,:)
   !end do
 
-  stop 123
+!  stop 123
+
+!====================MAIN CODE FOR SOLVING=====================================
 
 !BIG LOOP FOR POST-PROCESSING
 
-  big_loop_variable = 2
+!  big_loop_variable = 2
 
-  do while(big_loop_variable <= 200)
+!  do while(big_loop_variable <= 200)
 
-     num_data_test%num_divs_x = big_loop_variable
-     num_data_test%num_divs_y = big_loop_variable
+!     num_data_test%num_divs_x = big_loop_variable
+!     num_data_test%num_divs_y = big_loop_variable
 
      num_divs_x = num_data_test%num_divs_x
      num_divs_y = num_data_test%num_divs_y
@@ -237,6 +241,7 @@ program main
      allocate(A_global(num_nodes,num_nodes))
 
      allocate(b_global(num_nodes))
+     allocate(b_global_shell(num_nodes))
      allocate(qnodes(0:num_data_test%num_quadrature_nodes-1))
      allocate(qweights(0:num_data_test%num_quadrature_nodes-1))
 
@@ -259,6 +264,10 @@ program main
   !write(*,*) test_element%nodes%coord(1)
 
      call build_global_matrices(A_global, b_global, prob_data_test, num_data_test)
+
+     call build_global_b(b_global_shell,prob_data_test,num_data_test)
+
+  !write(*,*) MAXVAL(b_global_shell - b_global)
 
   !write(*,*) nint
   !write(*,*) A_global - transpose(A_global)
@@ -420,6 +429,7 @@ program main
      deallocate(col_ind)
      deallocate(A_global)
      deallocate(b_global)
+     deallocate(b_global_shell)
      deallocate(qnodes)
      deallocate(qweights)
      deallocate(b_test)
@@ -442,9 +452,9 @@ program main
      call VecDestroy(soln_prev,ierr)
      call VecDestroy(temp_vec,ierr)
 
-     big_loop_variable = big_loop_variable*2
+!     big_loop_variable = big_loop_variable*2
 
-  end do
+!  end do
 
   call PetscFinalize(ierr)
 

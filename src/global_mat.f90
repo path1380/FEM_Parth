@@ -140,4 +140,45 @@ contains
      end do
 
   end subroutine MyMult
+
+  subroutine build_global_b(b_global, prob_data, num_data)
+     type(problem_data) :: prob_data
+     type(numerics_data) :: num_data
+     
+     real(kind=dp), dimension(((num_data%num_divs_x)+1)*((num_data%num_divs_y)+1)) :: b_global
+
+     integer :: num_divs_x,num_divs_y,num_elements,num_nodes,num_quadrature_nodes
+     integer :: i,j,k,l,glo_i,glo_j
+
+     type(element) :: temp_element
+     
+     real(kind=dp), dimension(4) :: temp_b_local
+
+     num_divs_x = num_data%num_divs_x
+     num_divs_y = num_data%num_divs_y
+     num_quadrature_nodes = num_data%num_quadrature_nodes
+     
+     num_elements = num_divs_x*num_divs_y
+     num_nodes = (num_divs_x+1)*(num_divs_y+1)
+
+     !Initialize the global matrices
+
+     do j=1,num_nodes
+        b_global(j) = 0.0_dp
+     end do
+
+     !Build the global matrices
+     do k=1,num_elements
+        temp_element = solve_element(k,prob_data,num_data)
+
+        call build_local_b(prob_data,num_data,temp_element,temp_b_local)
+
+!glo_i and glo_j are the global node numbers of nodes in element temp_element with local node numbers i and j.
+
+        do j=1,4
+           glo_j = temp_element%nodes(j)%global_num
+           b_global(glo_j) = b_global(glo_j) + temp_b_local(j)
+        end do
+     end do     
+  end subroutine build_global_b
 end module global_mat
