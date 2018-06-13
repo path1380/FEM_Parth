@@ -38,4 +38,25 @@ module solver_context_interfaces
            END SUBROUTINE MatShellGetContext
          END INTERFACE MatShellGetContext
 
+! ----------------------------------------------------
+         INTERFACE PCShellSetContext
+           SUBROUTINE PCShellSetContext(pc,ctx,ierr)
+             USE solver_context
+             PC :: pc
+             TYPE(MatCtx) :: ctx
+             PetscErrorCode :: ierr
+           END SUBROUTINE PCShellSetContext
+         END INTERFACE PCShellSetContext
+  ! ----------------------------------------------------
+
+  ! ----------------------------------------------------
+         INTERFACE PCShellGetContext
+           SUBROUTINE PCShellGetContext(pc,ctx,ierr)
+             USE solver_context
+             PC :: pc
+             TYPE(MatCtx),  POINTER :: ctx
+             PetscErrorCode :: ierr
+           END SUBROUTINE PCShellGetContext
+         END INTERFACE PCShellGetContext
+
 end module solver_context_interfaces

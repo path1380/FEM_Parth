@@ -181,4 +181,87 @@ contains
         end do
      end do     
   end subroutine build_global_b
+
+  subroutine PC_Shell_Jacobi(pc_jacobi,op_arg,ret_val,ierr)
+!======================================================================================
+!
+!  Brief description : This subroutine defines the preconditioner as an operator. 
+!
+!  Inputs : pc_jacobi    - Shell Preconditioner for which operator is to be defined
+!           op_arg       - Vector on which the operation is to be carried out
+!           ierr         - Error code
+!
+!  Output : ret_val      - Vector obtained as a result of the operation
+!
+!  Detailed description : The subroutine takes the shell preconditioner (pc_jacobi)
+!                         as input and defines it as an operator on the operator 
+!                         argument (op_arg) which is equivalent to matrix 
+!                         multiplication to return the result (ret_val)
+!
+!======================================================================================
+
+     PC pc_jacobi
+     Vec op_arg,ret_val
+     PetscErrorCode ierr
+
+     type(MatCtx), POINTER :: ctx
+
+     type(problem_data) :: prob_data
+     type(numerics_data) :: num_data
+
+     integer :: num_divs_x,num_divs_y,num_elements,num_nodes,num_quadrature_nodes
+     integer :: i,j,k,l,glo_i,glo_j
+     integer, dimension(1) :: glo_j_array
+
+     real(kind=dp), dimension(4,4) :: temp_A_local
+
+     !Value in glo_ith row and glo_jth column of matrix represented by global_shell
+     real(kind=dp) :: global_shell_gloigloj,temp_val
+     real(kind=dp), dimension(1) :: temp_val_array
+
+     type(element) :: temp_element
+     
+     call PCShellGetContext(pc_jacobi,ctx,ierr)
+
+     temp_A_local = ctx%local_matrix
+     prob_data = ctx%prob
+     num_data = ctx%num
+
+     num_divs_x = num_data%num_divs_x
+     num_divs_y = num_data%num_divs_y
+     num_quadrature_nodes = num_data%num_quadrature_nodes
+     
+     num_elements = num_divs_x*num_divs_y
+     num_nodes = (num_divs_x+1)*(num_divs_y+1)
+
+     global_shell_gloigloj = 0.0_dp
+
+     do k=1,num_elements
+        temp_element = solve_element(k,prob_data,num_data)
+
+!        call build_local_A(prob_data,num_data,temp_A_local)
+!        call build_local_b(prob_data,num_data,temp_element,temp_b_local)
+
+!glo_i and glo_j are the global node numbers of nodes in element temp_element with local node numbers i and j.
+
+        do j=1,4
+           glo_j = temp_element%nodes(j)%global_num
+           glo_j_array(1) = glo_j-1
+           do i=1,4
+              glo_i = temp_element%nodes(i)%global_num
+              if (glo_i /= glo_j) then
+                 global_shell_gloigloj = 0.0_dp
+              else if (glo_i == glo_j) then
+                 global_shell_gloigloj = temp_A_local(i,j)
+              end if
+              call VecGetValues(op_arg,1,glo_j_array,temp_val_array,ierr)
+              temp_val = global_shell_gloigloj*temp_val_array(1)
+              call VecSetValue(ret_val,glo_i-1,temp_val,ADD_VALUES,ierr)
+!              ret_val(glo_i) = ret_val(glo_i) + (global_shell_gloigloj*op_arg(glo_j))
+           end do
+!           b_global(glo_j) = b_global(glo_j) + temp_b_local(j)
+        end do
+     end do
+
+  end subroutine PC_Shell_Jacobi
 end module global_mat

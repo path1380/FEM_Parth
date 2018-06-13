@@ -63,13 +63,13 @@ program main
   PetscScalar tol,norm_delta_u,temp_norm
 
   TYPE(MatCtx) :: ctxA
-  TYPE(MatCtx),POINTER :: ctxA_pt
+  TYPE(MatCtx),POINTER :: ctxA_pt,ctxA1
 
   Vec b,soln,soln_iter,b_newton,soln_init,delta_u,soln_prev,temp_vec,temp_op_arg,temp_ret_val
   Mat A,A_local_petsc,A_global_shell
 
-  KSP ksp,ksp_iter
-  PC pc
+  KSP ksp,ksp_iter,ksp_iter_shell
+  PC pc,pc_shell
 
 
   PetscViewer viewer
@@ -311,7 +311,7 @@ program main
 !=============Assigning values to vectors and Matrix===========================
 
   !Assigning values to RHS of linear system (Direct solution)
-     call VecSetValues(b,num_nodes,col_ind,b_global,INSERT_VALUES,ierr)
+     call VecSetValues(b,num_nodes,col_ind,b_global_shell,INSERT_VALUES,ierr)
      call VecAssemblyBegin(b,ierr)
      call VecAssemblyEnd(b,ierr)
 
@@ -358,13 +358,41 @@ program main
 !===========Solving linear system iteratively====================================
 
      call KSPCreate(PETSC_COMM_WORLD,ksp_iter,ierr)
+     call KSPCreate(PETSC_COMM_WORLD,ksp_iter_shell,ierr)
+
      call KSPSetFromOptions(ksp_iter,ierr)
+     call KSPSetFromOptions(ksp_iter_shell,ierr)
 
      call KSPSetOperators(ksp_iter,A,A,ierr)
+     call KSPSetOperators(ksp_iter_shell,A_global_shell,A_global_shell,ierr)
+
      call KSPSetType(ksp_iter,KSPCG,ierr)
+     call KSPSetType(ksp_iter_shell,KSPCG,ierr)
 
      call KSPGetPC(ksp_iter,pc,ierr)
+     call KSPGetPC(ksp_iter_shell,pc_shell,ierr)
+
      call PCSetType(pc,PCJACOBI,ierr)
+     call PCSetType(pc_shell,PCSHELL,ierr)
+     call PCShellSetContext(pc_shell,ctxA,ierr)
+
+     call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
+     call VecSetSizes(temp_op_arg,PETSC_DECIDE,num_nodes,ierr)
+     call VecSetFromOptions(temp_op_arg,ierr)
+
+     call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
+
+     call PC_Shell_Jacobi(pc_shell,delta_u,temp_ret_val,ierr)
+
+     call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
+
+     do i=1,num_nodes
+        write(*,*) A_global(i,i)
+     end do
+
+     stop 12
+
+     !call PCShellSetApply(pc_shell,MyMult,ierr)
 
      call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
 
@@ -375,26 +403,53 @@ program main
 
      n_iter_newton = 0
 
-     do while (norm_delta_u > tol)
+     !do while (norm_delta_u > tol)
+        !Copying soln of previous iteration to soln_prev
+     !   call VecCopy(soln_iter,soln_prev,ierr)
+
+        !Performing the operation b_newton = - b + A*soln_prev
+     !   call MatMultAdd(A,soln_prev,b,b_newton,ierr)
+
+        !Performing the solve for delta_u
+     !   call KSPSolve(ksp_iter,b_newton,delta_u,ierr)
+
+        !Calculating soln = soln_prev - delta_u
+     !   call VecWAXPY(soln_iter,-1.0_dp,delta_u,soln_prev,ierr)
+
+        !Calculating norm of delta_u
+     !   call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
+
+     !   n_iter_newton = n_iter_newton + 1
+        !write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
+     !end do
+
+     call VecSet(delta_u,1.0_dp,ierr)
+     call VecCopy(soln_init,soln_iter,ierr)
+
+     n_iter_newton = 0
+
+!     do while (norm_delta_u > tol)
         !Copying soln of previous iteration to soln_prev
         call VecCopy(soln_iter,soln_prev,ierr)
 
         !Performing the operation b_newton = - b + A*soln_prev
-        call MatMultAdd(A,soln_prev,b,b_newton,ierr)
-     
+        !call MatMultAdd(A,soln_prev,b,b_newton,ierr)
+        call MyMult(A_global_shell,soln_prev,b_newton,ierr)
+        call VecAXPY(b_newton,1.0_dp,b,ierr)
 
         !Performing the solve for delta_u
-        call KSPSolve(ksp_iter,b_newton,delta_u,ierr)
+        !call KSPSolve(ksp_iter_shell,b_newton,delta_u,ierr)
 
         !Calculating soln = soln_prev - delta_u
-        call VecWAXPY(soln_iter,-1.0_dp,delta_u,soln_prev,ierr)
+!        call VecWAXPY(soln_iter,-1.0_dp,delta_u,soln_prev,ierr)
 
         !Calculating norm of delta_u
-        call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
+!        call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
 
-        n_iter_newton = n_iter_newton + 1
+!        n_iter_newton = n_iter_newton + 1
         !write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
-     end do
+!     end do
+
 
      call VecCreate(PETSC_COMM_WORLD,temp_vec,ierr)
      call VecSetSizes(temp_vec,PETSC_DECIDE,n,ierr)
@@ -405,7 +460,7 @@ program main
 
      call VecGetValues(soln_iter,num_nodes,col_ind,b_global,ierr)
 
-!===========Solving linear system iteratively====================================
+!===========Solving linear system iteratively=============xA=======================
 
 !======================Plotting using Petsc Viewer===============================
 
@@ -442,7 +497,9 @@ program main
 
      call KSPDestroy(ksp,ierr)
      call KSPDestroy(ksp_iter,ierr)
+     call KSPDestroy(ksp_iter_shell,ierr)
      call MatDestroy(A,ierr)
+     call MatDestroy(A_global_shell,ierr)
      call VecDestroy(b,ierr)
      call VecDestroy(soln,ierr)
      call VecDestroy(soln_iter,ierr)
