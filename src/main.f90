@@ -40,7 +40,7 @@ program main
   type(node) :: test_node
   type(element) :: test_element,test_element1,test_element2,test_element3,test_element4
 
-  integer :: i,nx,ny,big_loop_variable
+  integer :: i,nx,ny,big_loop_variable,p,q
   real(kind=dp) :: f_approx,xi,yi,hx,hy,length,width
 
 !MPI variables
@@ -66,7 +66,7 @@ program main
   TYPE(MatCtx),POINTER :: ctxA_pt,ctxA1
 
   Vec b,soln,soln_iter,b_newton,soln_init,delta_u,soln_prev,temp_vec,temp_op_arg,temp_ret_val
-  Mat A,A_local_petsc,A_global_shell
+  Mat A,A_local_petsc,A_global_shell,pshellmat
 
   KSP ksp,ksp_iter,ksp_iter_shell
   PC pc,pc_shell
@@ -123,40 +123,46 @@ program main
   call MatCreateShell(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,&
        &num_nodes,num_nodes,ctxA,A_global_shell,ierr)
 
+  !call MatCreate(PETSC_COMM_WORLD,A_global_shell,ierr)
+  !call MatSetSizes(A_global_shell,PETSC_DECIDE,PETSC_DECIDE,num_nodes,num_nodes,ierr)
+  !call MatSetFromOptions(A_global_shell,ierr)
+  !call MatSetType(A_global_shell,MATSHELL,ierr)
+  call MatSetup(A_global_shell,ierr)
+
   call MatShellSetContext(A_global_shell,ctxA,ierr)
 
   call MatShellSetOperation(A_global_shell,MATOP_MULT,MyMult,ierr)
 
 !=========Testing the matrix multiplication operation definition=============
 
-!  num_divs_x = num_data_test%num_divs_x
-!  num_divs_y = num_data_test%num_divs_y
+  !num_divs_x = num_data_test%num_divs_x
+  !num_divs_y = num_data_test%num_divs_y
 
-!  num_nodes = (num_divs_x+1)*(num_divs_y+1)
+  !num_nodes = (num_divs_x+1)*(num_divs_y+1)
 
-!  allocate(row_ind(0:num_nodes-1))
+  !allocate(row_ind(0:num_nodes-1))
 
-!  call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
-!  call VecSetSizes(temp_op_arg,PETSC_DECIDE,num_nodes,ierr)
-!  call VecSetFromOptions(temp_op_arg,ierr)
+  !call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
+  !call VecSetSizes(temp_op_arg,PETSC_DECIDE,num_nodes,ierr)
+  !call VecSetFromOptions(temp_op_arg,ierr)
 
-!  call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
+  !call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
 
-!  do i=0,num_nodes-1
+  !do i=0,num_nodes-1
+  
+  !   call VecSetValue(temp_op_arg,i,1.0_dp,INSERT_VALUES,ierr)
 
-!     call VecSetValue(temp_op_arg,i,1.0_dp,INSERT_VALUES,ierr)
+  !   call VecAssemblyBegin(temp_op_arg,ierr)
+  !   call VecAssemblyEnd(temp_op_arg,ierr)
 
-!     call VecAssemblyBegin(temp_op_arg,ierr)
-!     call VecAssemblyEnd(temp_op_arg,ierr)
+  !   call MyMult(A_global_shell,temp_op_arg,temp_ret_val,ierr)
 
-!     call MyMult(A_global_shell,temp_op_arg,temp_ret_val,ierr)
+  !   call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
-!     call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
+  !   call VecSet(temp_op_arg,0.0_dp,ierr)
+  !   call VecSet(temp_ret_val,0.0_dp,ierr)
 
-!     call VecSet(temp_op_arg,0.0_dp,ierr)
-!     call VecSet(temp_ret_val,0.0_dp,ierr)
-
-!  end do
+  !end do
 
 !  allocate(A_global(num_nodes,num_nodes))
 ! allocate(b_global(num_nodes))
@@ -364,7 +370,8 @@ program main
      call KSPSetFromOptions(ksp_iter_shell,ierr)
 
      call KSPSetOperators(ksp_iter,A,A,ierr)
-     call KSPSetOperators(ksp_iter_shell,A_global_shell,A_global_shell,ierr)
+     !call KSPSetOperators(ksp_iter_shell,A_global_shell,A_global_shell,ierr)
+     call KSPSetOperators(ksp_iter_shell,A,A_global_shell,ierr)
 
      call KSPSetType(ksp_iter,KSPCG,ierr)
      call KSPSetType(ksp_iter_shell,KSPCG,ierr)
@@ -373,26 +380,23 @@ program main
      call KSPGetPC(ksp_iter_shell,pc_shell,ierr)
 
      call PCSetType(pc,PCJACOBI,ierr)
+     !call PCSetType(pc_shell,PCJACOBI,ierr)
      call PCSetType(pc_shell,PCSHELL,ierr)
      call PCShellSetContext(pc_shell,ctxA,ierr)
 
-     call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
-     call VecSetSizes(temp_op_arg,PETSC_DECIDE,num_nodes,ierr)
-     call VecSetFromOptions(temp_op_arg,ierr)
+!Testing the preconditioner operator definition
 
-     call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
+!     call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
+!     call VecSetSizes(temp_op_arg,PETSC_DECIDE,num_nodes,ierr)
+!     call VecSetFromOptions(temp_op_arg,ierr)
 
-     call PC_Shell_Jacobi(pc_shell,delta_u,temp_ret_val,ierr)
+!     call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
 
-     call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
+!     call PC_Shell_Jacobi(pc_shell,delta_u,temp_ret_val,ierr)
 
-     do i=1,num_nodes
-        write(*,*) A_global(i,i)
-     end do
+!     call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
-     stop 12
-
-     !call PCShellSetApply(pc_shell,MyMult,ierr)
+     call PCShellSetApply(pc_shell,PC_Shell_Jacobi,ierr)
 
      call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
 
@@ -420,7 +424,7 @@ program main
      !   call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
 
      !   n_iter_newton = n_iter_newton + 1
-        !write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
+     !   write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
      !end do
 
      call VecSet(delta_u,1.0_dp,ierr)
@@ -428,7 +432,7 @@ program main
 
      n_iter_newton = 0
 
-!     do while (norm_delta_u > tol)
+     !do while (norm_delta_u > tol)
         !Copying soln of previous iteration to soln_prev
         call VecCopy(soln_iter,soln_prev,ierr)
 
@@ -437,18 +441,24 @@ program main
         call MyMult(A_global_shell,soln_prev,b_newton,ierr)
         call VecAXPY(b_newton,1.0_dp,b,ierr)
 
+        call PCGetOperators(pc_shell,PETSC_NULL_MAT,pshellmat,ierr)
+
+        call MatGetLocalSize(pshellmat,p,q,ierr)
+
+        !call MatView(pshellmat,PETSC_VIEWER_STDOUT_WORLD,ierr)
+
         !Performing the solve for delta_u
         !call KSPSolve(ksp_iter_shell,b_newton,delta_u,ierr)
 
         !Calculating soln = soln_prev - delta_u
-!        call VecWAXPY(soln_iter,-1.0_dp,delta_u,soln_prev,ierr)
+        !call VecWAXPY(soln_iter,-1.0_dp,delta_u,soln_prev,ierr)
 
         !Calculating norm of delta_u
-!        call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
+        !call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
 
-!        n_iter_newton = n_iter_newton + 1
+        !n_iter_newton = n_iter_newton + 1
         !write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
-!     end do
+     !end do
 
 
      call VecCreate(PETSC_COMM_WORLD,temp_vec,ierr)
