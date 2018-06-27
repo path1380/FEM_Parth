@@ -3,9 +3,6 @@
 PETSC_DIR ?= /home/parth/petsc
 PETSC_ARCH ?= arch-linux2-c-debug
 
-MPIEXEC = mpiexec
-FC = mpif90
-LD = $(FC)
 SRC = src
 BIN = bin
 F90FLAGS = -fbounds-check -Wall -fbacktrace -g
@@ -20,16 +17,18 @@ EXECUTABLE = test.x
 .PHONY: clean compile build run
 
 include $(PETSC_DIR)/lib/petsc/conf/variables
-include $(PETSC_DIR)/lib/petsc/conf/rules
 
+all : build
 
-compile:
-	$(FC) $(FFLAGS) -c $(SRCS) -g
-	mv *.mod $(BIN)
-	mv *.o $(BIN)
+$(OBJECTS) : $(BIN)/%.o : $(SRC)/%.f90
+	$(FC) $(FFLAGS) -c -o $@ $(FC_MODULE_OUTPUT_FLAG)$(@D) $^
 
-build: $(OBJECTS)
-	$(LD) -o $(EXECUTABLE) $(OBJECTS) -llapack $(PETSC_LIB)
+$(EXECUTABLE) : $(OBJECTS)
+	$(FC_LINKER) -o $@ $^ -llapack $(PETSC_LIB)
+
+compile: $(OBJECTS)
+
+build: $(EXECUTABLE)
 
 run: $(EXECUTABLE)
 	$(MPIEXEC) -np 1 ./$(EXECUTABLE) >> output.txt
