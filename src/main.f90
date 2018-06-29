@@ -366,12 +366,12 @@ program main
      call KSPCreate(PETSC_COMM_WORLD,ksp_iter,ierr)
      call KSPCreate(PETSC_COMM_WORLD,ksp_iter_shell,ierr)
 
-     call KSPSetFromOptions(ksp_iter,ierr)
-     call KSPSetFromOptions(ksp_iter_shell,ierr)
+     call KSPSetOptionsPrefix(ksp_iter_shell,"shell_",ierr)
 
      call KSPSetOperators(ksp_iter,A,A,ierr)
      !call KSPSetOperators(ksp_iter_shell,A_global_shell,A_global_shell,ierr)
-     call KSPSetOperators(ksp_iter_shell,A,A_global_shell,ierr)
+     !call KSPSetOperators(ksp_iter_shell,A_global_shell,A,ierr)
+     call KSPSetOperators(ksp_iter_shell,A,A,ierr)
 
      call KSPSetType(ksp_iter,KSPCG,ierr)
      call KSPSetType(ksp_iter_shell,KSPCG,ierr)
@@ -383,6 +383,9 @@ program main
      !call PCSetType(pc_shell,PCJACOBI,ierr)
      call PCSetType(pc_shell,PCSHELL,ierr)
      call PCShellSetContext(pc_shell,ctxA,ierr)
+     
+     call KSPSetFromOptions(ksp_iter,ierr)
+     call KSPSetFromOptions(ksp_iter_shell,ierr)
 
 !Testing the preconditioner operator definition
 
@@ -441,14 +444,14 @@ program main
         call MyMult(A_global_shell,soln_prev,b_newton,ierr)
         call VecAXPY(b_newton,1.0_dp,b,ierr)
 
-        call PCGetOperators(pc_shell,PETSC_NULL_MAT,pshellmat,ierr)
+        !call PCGetOperators(pc_shell,PETSC_NULL_MAT,pshellmat,ierr)
 
-        call MatGetLocalSize(pshellmat,p,q,ierr)
+        !call MatGetLocalSize(pshellmat,p,q,ierr)
 
         !call MatView(pshellmat,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
         !Performing the solve for delta_u
-        !call KSPSolve(ksp_iter_shell,b_newton,delta_u,ierr)
+        call KSPSolve(ksp_iter_shell,b_newton,delta_u,ierr)
 
         !Calculating soln = soln_prev - delta_u
         !call VecWAXPY(soln_iter,-1.0_dp,delta_u,soln_prev,ierr)
@@ -470,7 +473,7 @@ program main
 
      call VecGetValues(soln_iter,num_nodes,col_ind,b_global,ierr)
 
-!===========Solving linear system iteratively=============xA=======================
+!===========Solving linear system iteratively====================================
 
 !======================Plotting using Petsc Viewer===============================
 
