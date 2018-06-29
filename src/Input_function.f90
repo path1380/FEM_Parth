@@ -5,14 +5,14 @@ module Input_function
    type(problem_data) :: prob_data_test
    type(numerics_data) :: num_data_test
 contains
-   subroutine Input_problem_data(prob_data)
-      type(problem_data) :: prob_data
+   subroutine Input_problem_data(prob_data_test)
+      type(problem_data) :: prob_data_test
       prob_data_test%domain_length = 1.0_dp
       prob_data_test%domain_width = 1.0_dp
    end subroutine Input_problem_data
 
-   subroutine Input_numerics_data(num_data)
-      type(numerics_data) :: num_data
+   subroutine Input_numerics_data(num_data_test)
+      type(numerics_data) :: num_data_test
       num_data_test%num_divs_x = 2
       num_data_test%num_divs_y = 2
       num_data_test%num_quadrature_nodes = 3

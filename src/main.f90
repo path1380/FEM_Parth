@@ -29,19 +29,21 @@ program main
 
   real(kind=dp), allocatable, dimension(:) :: qnodes,qweights
   real(kind=dp), dimension(4,4) :: A_local
-  real(kind=dp), dimension(4) :: b_local,b_local1,b_local2,b_local3,b_local4
-  real(kind=dp) :: test_x,test_y
+  !real(kind=dp), dimension(4) :: b_local1,b_local2,b_local3,b_local4
+  !real(kind=dp) :: test_x,test_y
   
   real(kind=dp), allocatable, dimension(:,:) :: A_global  
   real(kind=dp), allocatable, dimension(:) :: b_global,b_test,f_val,b_global_shell
 
   integer :: num_divs_x,num_divs_y,num_nodes
   
-  type(node) :: test_node
-  type(element) :: test_element,test_element1,test_element2,test_element3,test_element4
+  !type(node) :: test_node
+  !type(element) :: test_element,test_element1,test_element2,test_element3,test_element4
 
-  integer :: i,nx,ny,big_loop_variable,p,q
-  real(kind=dp) :: f_approx,xi,yi,hx,hy,length,width
+  integer :: i,nx,ny
+  !integer :: big_loop_variable
+  real(kind=dp) :: xi,yi,hx,hy,length,width
+  !real(kind=dp) :: f_approx
 
 !MPI variables
 
@@ -50,7 +52,7 @@ program main
 !LAPACK variables
 
   integer, allocatable, dimension(:) :: IPIV
-  integer :: INFO
+  !integer :: INFO
 
 !Petsc variables
 
@@ -58,22 +60,25 @@ program main
   integer :: n_iter_newton
   PetscInt n
   PetscErrorCode ierr
-  PetscBool flg
-  PetscOffset i_b,i_soln
+  !PetscBool flg
+  !PetscOffset i_b,i_soln
   PetscScalar tol,norm_delta_u,temp_norm
 
   TYPE(MatCtx) :: ctxA
-  TYPE(MatCtx),POINTER :: ctxA_pt,ctxA1
+  !TYPE(MatCtx),POINTER :: ctxA_pt,ctxA1
 
-  Vec b,soln,soln_iter,b_newton,soln_init,delta_u,soln_prev,temp_vec,temp_op_arg,temp_ret_val
-  Mat A,A_local_petsc,A_global_shell,pshellmat
+  Vec b,soln,soln_iter,b_newton,soln_init,delta_u,soln_prev,temp_vec
+  !Vec temp_op_arg,temp_ret_val
+  Mat A,A_global_shell
+  !Mat A_local_petsc
+  !Mat pshellmat
 
   KSP ksp,ksp_iter,ksp_iter_shell
   PC pc,pc_shell
 
 
-  PetscViewer viewer
-  PetscDraw draw
+  !PetscViewer viewer
+  !PetscDraw draw
 
 !=================Petsc Initializing=============================================
   !Initializing Petsc
@@ -119,49 +124,6 @@ program main
   ctxA%local_matrix = A_local
   ctxA%prob = prob_data_test
   ctxA%num = num_data_test
-
-  
-!=========Testing the matrix multiplication operation definition=============
-
-  !num_divs_x = num_data_test%num_divs_x
-  !num_divs_y = num_data_test%num_divs_y
-
-  !num_nodes = (num_divs_x+1)*(num_divs_y+1)
-
-  !allocate(row_ind(0:num_nodes-1))
-
-  !call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
-  !call VecSetSizes(temp_op_arg,PETSC_DECIDE,num_nodes,ierr)
-  !call VecSetFromOptions(temp_op_arg,ierr)
-
-  !call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
-
-  !do i=0,num_nodes-1
-  
-  !   call VecSetValue(temp_op_arg,i,1.0_dp,INSERT_VALUES,ierr)
-
-  !   call VecAssemblyBegin(temp_op_arg,ierr)
-  !   call VecAssemblyEnd(temp_op_arg,ierr)
-
-  !   call MyMult(A_global_shell,temp_op_arg,temp_ret_val,ierr)
-
-  !   call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
-
-  !   call VecSet(temp_op_arg,0.0_dp,ierr)
-  !   call VecSet(temp_ret_val,0.0_dp,ierr)
-
-  !end do
-
-!  allocate(A_global(num_nodes,num_nodes))
-! allocate(b_global(num_nodes))
-
-!  call build_global_matrices(A_global, b_global, prob_data_test, num_data_test)
-
-!  do i=1,num_nodes
-!     write(*,*) A_global(i,:)
-!  end do
-
-!=========Testing the matrix multiplication operation definition=============
 
   !call MatShellGetContext(A_global_shell,ctxA_pt,ierr)
 
@@ -209,6 +171,51 @@ program main
   
      allocate(row_ind(0:num_nodes-1))
      allocate(col_ind(0:num_nodes-1))
+
+!=========Testing the matrix multiplication operation definition=============
+
+     !num_divs_x = num_data_test%num_divs_x
+     !num_divs_y = num_data_test%num_divs_y
+
+     !num_nodes = (num_divs_x+1)*(num_divs_y+1)
+
+     !allocate(row_ind(0:num_nodes-1))
+
+
+     !call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
+     !call VecSetSizes(temp_op_arg,PETSC_DECIDE,num_nodes,ierr)
+     !call VecSetFromOptions(temp_op_arg,ierr)
+
+     !call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
+
+     !do i=0,num_nodes-1
+  
+     !   call VecSetValue(temp_op_arg,i,1.0_dp,INSERT_VALUES,ierr)
+
+     !   call VecAssemblyBegin(temp_op_arg,ierr)
+     !   call VecAssemblyEnd(temp_op_arg,ierr)
+
+     !   call MatMult(A_global_shell,temp_op_arg,temp_ret_val,ierr)
+
+     !   call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
+
+     !   call VecSet(temp_op_arg,0.0_dp,ierr)
+     !   call VecSet(temp_ret_val,0.0_dp,ierr)
+
+     !end do
+
+   !  allocate(A_global(num_nodes,num_nodes))
+   ! allocate(b_global(num_nodes))
+
+   !  call build_global_matrices(A_global, b_global, prob_data_test, num_data_test)
+
+   !  do i=1,num_nodes
+   !     write(*,*) A_global(i,:)
+   !  end do
+
+!=========Testing the matrix multiplication operation definition=============
+
+
 
      do i=0,num_nodes-1
         row_ind(i) = i
@@ -405,39 +412,48 @@ program main
 
      call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
 
-  !Performing scaling outside the loop so that it doesn't repeat inside
+     !Performing scaling outside the loop so that it doesn't repeat inside
      call VecScale(b,-1.0_dp,ierr)
 
      tol = 1e-4
 
      n_iter_newton = 0
 
-     !do while (norm_delta_u > tol)
+     do while (norm_delta_u > tol)
         !Copying soln of previous iteration to soln_prev
-     !   call VecCopy(soln_iter,soln_prev,ierr)
+        call VecCopy(soln_iter,soln_prev,ierr)
 
         !Performing the operation b_newton = - b + A*soln_prev
-     !   call MatMultAdd(A,soln_prev,b,b_newton,ierr)
+        call MatMultAdd(A,soln_prev,b,b_newton,ierr)
+        !call MatMult(A,soln_prev,b_newton,ierr)
+
+        !call VecView(b_newton,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
         !Performing the solve for delta_u
-     !   call KSPSolve(ksp_iter,b_newton,delta_u,ierr)
+        call KSPSolve(ksp_iter,b_newton,delta_u,ierr)
+
+        !call VecView(delta_u,PETSC_VIEWER_STDOUT_WORLD,ierr)
+        !call MatView(A,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
         !Calculating soln = soln_prev - delta_u
-     !   call VecWAXPY(soln_iter,-1.0_dp,delta_u,soln_prev,ierr)
+        call VecWAXPY(soln_iter,-1.0_dp,delta_u,soln_prev,ierr)
 
         !Calculating norm of delta_u
-     !   call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
+        call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
 
-     !   n_iter_newton = n_iter_newton + 1
-     !   write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
-     !end do
+        n_iter_newton = n_iter_newton + 1
+        write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
+     end do
+
+     call VecView(soln_iter,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
      call VecSet(delta_u,1.0_dp,ierr)
+     call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
      call VecCopy(soln_init,soln_iter,ierr)
 
      n_iter_newton = 0
 
-     !do while (norm_delta_u > tol)
+     do while (norm_delta_u > tol)
         !Copying soln of previous iteration to soln_prev
         call VecCopy(soln_iter,soln_prev,ierr)
 
@@ -446,24 +462,28 @@ program main
         call MyMult(A_global_shell,soln_prev,b_newton,ierr)
         call VecAXPY(b_newton,1.0_dp,b,ierr)
 
-        !call PCGetOperators(pc_shell,PETSC_NULL_MAT,pshellmat,ierr)
+        !call PCGetOperators(pc_shell,pshellmat,PETSC_NULL_MAT,ierr)
 
         !call MatGetLocalSize(pshellmat,p,q,ierr)
 
-        !call MatView(pshellmat,PETSC_VIEWER_STDOUT_WORLD,ierr)
+        !call VecView(b_newton,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
         !Performing the solve for delta_u
         call KSPSolve(ksp_iter_shell,b_newton,delta_u,ierr)
 
+        !call VecView(delta_u,PETSC_VIEWER_STDOUT_WORLD,ierr)
+
         !Calculating soln = soln_prev - delta_u
-        !call VecWAXPY(soln_iter,-1.0_dp,delta_u,soln_prev,ierr)
+        call VecWAXPY(soln_iter,-1.0_dp,delta_u,soln_prev,ierr)
 
         !Calculating norm of delta_u
-        !call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
+        call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
 
-        !n_iter_newton = n_iter_newton + 1
-        !write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
-     !end do
+        n_iter_newton = n_iter_newton + 1
+        write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
+     end do
+
+     call VecView(soln_iter,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
 
      call VecCreate(PETSC_COMM_WORLD,temp_vec,ierr)
