@@ -83,7 +83,7 @@ program main
   call MPI_COMM_SIZE(PETSC_COMM_WORLD,nprocs,ierr)
   call MPI_COMM_RANK(PETSC_COMM_WORLD,myid,ierr)
 
-  call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-n',num_nodes,flg,ierr)
+  !call PetscOptionsGetInt(PETSC_NULL_OPTIONS,PETSC_NULL_CHARACTER,'-n',num_nodes,flg,ierr)
 !=================Petsc Initializing=============================================
  
 
@@ -120,19 +120,7 @@ program main
   ctxA%prob = prob_data_test
   ctxA%num = num_data_test
 
-  call MatCreateShell(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,&
-       &num_nodes,num_nodes,ctxA,A_global_shell,ierr)
-
-  !call MatCreate(PETSC_COMM_WORLD,A_global_shell,ierr)
-  !call MatSetSizes(A_global_shell,PETSC_DECIDE,PETSC_DECIDE,num_nodes,num_nodes,ierr)
-  !call MatSetFromOptions(A_global_shell,ierr)
-  !call MatSetType(A_global_shell,MATSHELL,ierr)
-  call MatSetup(A_global_shell,ierr)
-
-  call MatShellSetContext(A_global_shell,ctxA,ierr)
-
-  call MatShellSetOperation(A_global_shell,MATOP_MULT,MyMult,ierr)
-
+  
 !=========Testing the matrix multiplication operation definition=============
 
   !num_divs_x = num_data_test%num_divs_x
@@ -202,6 +190,20 @@ program main
      num_nodes = (num_divs_x+1)*(num_divs_y+1)
 
      n = num_nodes
+
+     call MatCreateShell(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,&
+       &num_nodes,num_nodes,ctxA,A_global_shell,ierr)
+
+     !call MatCreate(PETSC_COMM_WORLD,A_global_shell,ierr)
+     !call MatSetSizes(A_global_shell,PETSC_DECIDE,PETSC_DECIDE,num_nodes,num_nodes,ierr)
+     !call MatSetFromOptions(A_global_shell,ierr)
+     !call MatSetType(A_global_shell,MATSHELL,ierr)
+     call MatSetup(A_global_shell,ierr)
+
+     call MatShellSetContext(A_global_shell,ctxA,ierr)
+
+     call MatShellSetOperation(A_global_shell,MATOP_MULT,MyMult,ierr)
+
 
 !=====================Petsc declarations========================================
   
@@ -369,9 +371,9 @@ program main
      call KSPSetOptionsPrefix(ksp_iter_shell,"shell_",ierr)
 
      call KSPSetOperators(ksp_iter,A,A,ierr)
-     !call KSPSetOperators(ksp_iter_shell,A_global_shell,A_global_shell,ierr)
+     call KSPSetOperators(ksp_iter_shell,A_global_shell,A_global_shell,ierr)
      !call KSPSetOperators(ksp_iter_shell,A_global_shell,A,ierr)
-     call KSPSetOperators(ksp_iter_shell,A,A,ierr)
+     !call KSPSetOperators(ksp_iter_shell,A,A,ierr)
 
      call KSPSetType(ksp_iter,KSPCG,ierr)
      call KSPSetType(ksp_iter_shell,KSPCG,ierr)
