@@ -41,7 +41,7 @@ program main
   !type(element) :: test_element,test_element1,test_element2,test_element3,test_element4
 
   integer :: i,nx,ny
-  !integer :: big_loop_variable
+  integer :: big_loop_variable
   real(kind=dp) :: xi,yi,hx,hy,length,width
   !real(kind=dp) :: f_approx
 
@@ -119,12 +119,7 @@ program main
 
   !call MatView(A_local_petsc,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
-  call build_local_A(prob_data_test,num_data_test, A_local)
-
-  ctxA%local_matrix = A_local
-  ctxA%prob = prob_data_test
-  ctxA%num = num_data_test
-
+  
   !call MatShellGetContext(A_global_shell,ctxA_pt,ierr)
 
   !write(*,*) ctxA_pt%local_matrix
@@ -139,12 +134,12 @@ program main
 
 !BIG LOOP FOR POST-PROCESSING
 
-!  big_loop_variable = 2
+  big_loop_variable = 2
 
-!  do while(big_loop_variable <= 200)
+  do while(big_loop_variable <= 50)
 
-!     num_data_test%num_divs_x = big_loop_variable
-!     num_data_test%num_divs_y = big_loop_variable
+     num_data_test%num_divs_x = big_loop_variable
+     num_data_test%num_divs_y = big_loop_variable
 
      num_divs_x = num_data_test%num_divs_x
      num_divs_y = num_data_test%num_divs_y
@@ -152,6 +147,13 @@ program main
      num_nodes = (num_divs_x+1)*(num_divs_y+1)
 
      n = num_nodes
+
+     call build_local_A(prob_data_test,num_data_test, A_local)
+
+     ctxA%local_matrix = A_local
+     ctxA%prob = prob_data_test
+     ctxA%num = num_data_test
+
 
      call MatCreateShell(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,&
        &num_nodes,num_nodes,ctxA,A_global_shell,ierr)
@@ -398,15 +400,15 @@ program main
 
 !Testing the preconditioner operator definition
 
-!     call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
-!     call VecSetSizes(temp_op_arg,PETSC_DECIDE,num_nodes,ierr)
-!     call VecSetFromOptions(temp_op_arg,ierr)
+     !call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
+     !call VecSetSizes(temp_op_arg,PETSC_DECIDE,num_nodes,ierr)
+     !call VecSetFromOptions(temp_op_arg,ierr)
 
-!     call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
+     !call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
 
-!     call PC_Shell_Jacobi(pc_shell,delta_u,temp_ret_val,ierr)
+     !call PC_Shell_Jacobi(pc_shell,delta_u,temp_ret_val,ierr)
 
-!     call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
+     !call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
      call PCShellSetApply(pc_shell,PC_Shell_Jacobi,ierr)
 
@@ -442,10 +444,23 @@ program main
         call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
 
         n_iter_newton = n_iter_newton + 1
-        write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
+        !write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
      end do
 
-     call VecView(soln_iter,PETSC_VIEWER_STDOUT_WORLD,ierr)
+     !call VecView(soln_iter,PETSC_VIEWER_STDOUT_WORLD,ierr)
+
+     do i=1,num_nodes
+        f_val(i) = 0.0_dp
+        ny = num_divs_y+1-mod(i-1,num_divs_y+1)
+        nx = 1 + ((i-1)/(num_divs_y+1))
+        xi = hx*(nx-1)
+        yi = hy*(ny-1)
+        f_val(i) = f(xi,yi)
+     end do
+
+     call VecGetValues(soln_iter,num_nodes,col_ind,b_global,ierr)
+
+     write(*,*) log(dble(num_divs_x)),log(maxval(abs(b_global - f_val))) 
 
      call VecSet(delta_u,1.0_dp,ierr)
      call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
@@ -480,10 +495,14 @@ program main
         call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
 
         n_iter_newton = n_iter_newton + 1
-        write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
+        !write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
      end do
 
-     call VecView(soln_iter,PETSC_VIEWER_STDOUT_WORLD,ierr)
+     call VecGetValues(soln_iter,num_nodes,col_ind,b_global,ierr)
+
+     write(*,*) log(dble(num_divs_x)),log(maxval(abs(b_global - f_val))) 
+
+     !call VecView(soln_iter,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
 
      call VecCreate(PETSC_COMM_WORLD,temp_vec,ierr)
@@ -493,7 +512,7 @@ program main
      call VecNorm(temp_vec,NORM_INFINITY,temp_norm,ierr)
      !write(*,*) 'Infinity norm of difference between direct and iterative solution is',temp_norm
 
-     call VecGetValues(soln_iter,num_nodes,col_ind,b_global,ierr)
+     
 
 !===========Solving linear system iteratively====================================
 
@@ -503,15 +522,8 @@ program main
 
 !======================Plotting using Petsc Viewer===============================
 
-     do i=1,num_nodes
-        f_val(i) = 0.0_dp
-        ny = num_divs_y+1-mod(i-1,num_divs_y+1)
-        nx = 1 + ((i-1)/(num_divs_y+1))
-        xi = hx*(nx-1)
-        yi = hy*(ny-1)
-        f_val(i) = f(xi,yi)
-     end do
-     write(*,*) log(dble(num_divs_x)),log(maxval(abs(b_global - f_val))) 
+     
+     
 
 !==============Deallocating Array Memory========================================
 
@@ -544,9 +556,9 @@ program main
      call VecDestroy(soln_prev,ierr)
      call VecDestroy(temp_vec,ierr)
 
-!     big_loop_variable = big_loop_variable*2
+     big_loop_variable = big_loop_variable*2
 
-!  end do
+  end do
 
   call PetscFinalize(ierr)
 

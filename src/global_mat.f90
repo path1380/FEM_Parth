@@ -239,6 +239,8 @@ contains
 
      global_shell_gloigloj = 0.0_dp
 
+     call VecSet(ret_val,0.0_dp,ierr)
+
      do k=1,num_elements
         temp_element = solve_element(k,prob_data,num_data)
 
@@ -259,6 +261,9 @@ contains
               end if
               !call VecGetValues(op_arg,1,glo_j_array,temp_val_array,ierr)
               temp_val = global_shell_gloigloj
+              if (glo_i == 0 .and. glo_j == 0) then
+                 write(*,*) temp_val
+              end if
               call VecSetValue(ret_val,glo_i-1,temp_val,ADD_VALUES,ierr)
 !              ret_val(glo_i) = ret_val(glo_i) + (global_shell_gloigloj*op_arg(glo_j))
            end do
