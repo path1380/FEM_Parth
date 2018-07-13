@@ -7,6 +7,7 @@ module local_mat
   use basis_function
   use Input_function
   use petsc
+  use solver_context_interfaces
   implicit none
 contains
 
@@ -134,5 +135,62 @@ contains
      end do
 
   end subroutine build_local_A_petsc
+
+  subroutine MyMult_local(local_shell, op_arg, ret_val, ierr)
+     Mat local_shell
+     Vec op_arg, ret_val    
+     PetscErrorCode ierr
+
+     type(MatCtx), POINTER :: local_ctx_pt
+
+     type(problem_data) :: prob_data
+     type(numerics_data) :: num_data
+
+     integer :: nq,i,j,k,l
+     integer, dimension(1) :: loc_j_array
+
+     real(kind=dp) :: temp_val, alocalij
+     real(kind=dp), dimension(1) :: temp_val_array
+     real(kind=dp), allocatable, dimension(:) :: qnodes,qweights
+
+     call MatShellGetContext(local_shell,local_ctx_pt,ierr)
+
+     prob_data = local_ctx_pt%prob
+     num_data = local_ctx_pt%num
+
+     nq = num_data%num_quadrature_nodes
+
+     allocate(qnodes(0:nq))
+     allocate(qweights(0:nq))
+
+     call lglnodes(qnodes,qweights,nq)
+
+     !Initialize ret_val to 0 for adding values
+     call VecSet(ret_val,0.0_dp,ierr)
+     temp_val = 0.0_dp
+     alocalij = 0.0_dp
+
+     do i=1,4
+        do j=1,4
+           loc_j_array(1) = j-1
+           do k=0,nq
+              do l=0,nq
+                 alocalij = alocalij + (qweights(k)*qweights(l)*bilinear_basis(qnodes(k),&
+                            qnodes(l),i)*bilinear_basis(qnodes(k),qnodes(l),j)*&
+                            Jacobian(prob_data,num_data))
+              end do
+           end do
+           call VecGetValues(op_arg,1,loc_j_array,temp_val_array,ierr)
+           temp_val = alocalij*temp_val_array(1)
+           call VecSetValue(ret_val,i-1,temp_val,ADD_VALUES,ierr)
+           alocalij = 0.0_dp
+        end do
+        temp_val = 0.0_dp
+     end do     
+
+     deallocate(qnodes)
+     deallocate(qweights)
+
+  end subroutine MyMult_local
 
 end module local_mat
