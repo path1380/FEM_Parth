@@ -31,7 +31,7 @@ program main
   real(kind=dp), dimension(4,4) :: A_local
   !real(kind=dp), dimension(4) :: b_local1,b_local2,b_local3,b_local4
   !real(kind=dp) :: test_x,test_y
-  real(kind=dp), dimension(4) :: b_local_test
+  !real(kind=dp), dimension(4) :: b_local_test
   
   !real(kind=dp), allocatable, dimension(:,:) :: A_global  
   real(kind=dp), allocatable, dimension(:) :: b_global,b_test,f_val,b_global_shell
@@ -68,8 +68,9 @@ program main
   TYPE(MatCtx) :: ctxA
   !TYPE(MatCtx),POINTER :: ctxA_pt,ctxA1
 
-  Vec b,soln,soln_iter,b_newton,soln_init,delta_u,soln_prev,temp_vec,b_local
-  !Vec temp_op_arg,temp_ret_val
+  Vec b,soln,soln_iter,b_newton,soln_init,delta_u,soln_prev,temp_vec
+  Vec temp_op_arg,temp_ret_val
+  !Vec b_local
   Mat A,A_global_shell
   Mat A_local_shell
   !Mat A_local_petsc
@@ -79,9 +80,9 @@ program main
   KSP ksp_iter_shell
   !KSP ksp_local_shell
   !PC pc
-  PC pc_shell
+  PC pc_shell,pc_shell_local
 
-  type(element) :: test_element
+  !type(element) :: test_element
 
 
   !PetscViewer viewer
@@ -258,30 +259,52 @@ program main
 
      !end do
 
-     !do i=1,4
-     !   write(*,*) A_local(i,:)
-     !end do
+     do i=1,4
+        write(*,*) A_local(i,:)
+     end do
 
 
 !====================Testing MyMult_local================================
 
 !====================Testing build_local_b_vec===========================
 
-   do i=1,4
-     test_element = solve_element(i,prob_data_test,num_data_test)
-     call build_local_b(prob_data_test,num_data_test,test_element,b_local_test)
-     write(*,*) b_local_test
+     !do i=1,4
+     !  test_element = solve_element(i,prob_data_test,num_data_test)
+     !  call build_local_b(prob_data_test,num_data_test,test_element,b_local_test)
+     !  write(*,*) b_local_test
 
-     call VecCreate(PETSC_COMM_WORLD,b_local,ierr)
-     call VecSetSizes(b_local,PETSC_DECIDE,4,ierr)
-     call VecSetFromOptions(b_local,ierr)
-     call build_local_b_vec(prob_data_test,num_data_test,test_element,b_local)
+     !  call VecCreate(PETSC_COMM_WORLD,b_local,ierr)
+     !  call VecSetSizes(b_local,PETSC_DECIDE,4,ierr)
+     !  call VecSetFromOptions(b_local,ierr)
+     !  call build_local_b_vec(prob_data_test,num_data_test,test_element,b_local)
 
-     call VecView(b_local,PETSC_VIEWER_STDOUT_SELF,ierr)
-  end do
+     !  call VecView(b_local,PETSC_VIEWER_STDOUT_SELF,ierr)
+     !end do
 
 !====================Testing build_local_b_vec===========================
 
+!====================Testing local preconditioner========================
+
+     call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
+     call VecSetSizes(temp_op_arg,PETSC_DECIDE,4,ierr)
+     call VecSetFromOptions(temp_op_arg,ierr)
+
+     call VecSet(temp_op_arg,1.0_dp,ierr)
+
+     call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
+
+     call PCCreate(PETSC_COMM_WORLD,pc_shell_local,ierr)
+     call PCSetType(pc_shell_local,PCSHELL,ierr)
+     call PCShellSetContext(pc_shell_local,ctxA,ierr)
+     !call PCShellSetApply(pc_shell,PC_Shell_Jacobi,ierr)
+
+     call PC_Shell_Jacobi_local(pc_shell_local,temp_op_arg,temp_ret_val,ierr)
+     
+     call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_SELF,ierr)
+
+     
+
+!====================Testing local preconditioner========================
 
      do i=0,num_nodes-1
         row_ind(i) = i

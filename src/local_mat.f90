@@ -228,5 +228,66 @@ contains
      end do
   end subroutine build_local_b_vec
 
+  subroutine PC_Shell_Jacobi_local(pc_jacobi_local,op_arg,ret_val,ierr)
+
+     PC pc_jacobi_local
+     Vec op_arg,ret_val
+     PetscErrorCode ierr
+
+     type(MatCtx), POINTER :: local_ctx_pt
+
+     type(problem_data) :: prob_data
+     type(numerics_data) :: num_data
+
+     integer :: nq,i,j,k,l
+     integer, dimension(1) :: loc_j_array
+
+     real(kind=dp) :: temp_val, alocalij
+     real(kind=dp), dimension(1) :: temp_val_array
+     real(kind=dp), allocatable, dimension(:) :: qnodes,qweights
+
+     call PCShellGetContext(pc_jacobi_local,local_ctx_pt,ierr)
+
+     prob_data = local_ctx_pt%prob
+     num_data = local_ctx_pt%num
+
+     nq = num_data%num_quadrature_nodes
+
+     allocate(qnodes(0:nq))
+     allocate(qweights(0:nq))
+
+     call lglnodes(qnodes,qweights,nq)
+
+     !Initialize ret_val to 0 for adding values
+     call VecSet(ret_val,0.0_dp,ierr)
+     temp_val = 0.0_dp
+     alocalij = 0.0_dp
+
+     do i=1,4
+        do j=1,4
+           loc_j_array(1) = j-1
+           if (i == j) then
+              do k=0,nq
+                 do l=0,nq
+                    alocalij = alocalij + (qweights(k)*qweights(l)*bilinear_basis(qnodes(k),&
+                               qnodes(l),i)*bilinear_basis(qnodes(k),qnodes(l),j)*&
+                               Jacobian(prob_data,num_data))
+                 end do
+              end do
+              call VecGetValues(op_arg,1,loc_j_array,temp_val_array,ierr)
+              temp_val = alocalij*temp_val_array(1)
+           else if (i /= j) then
+              temp_val = 0.0_dp
+           end if
+           call VecSetValue(ret_val,i-1,temp_val,ADD_VALUES,ierr)
+           alocalij = 0.0_dp
+        end do
+        temp_val = 0.0_dp
+     end do     
+
+     deallocate(qnodes)
+     deallocate(qweights)
+
+  end subroutine PC_Shell_Jacobi_local
 
 end module local_mat
