@@ -193,4 +193,40 @@ contains
 
   end subroutine MyMult_local
 
+  subroutine build_local_b_vec(prob_data, num_data, elt, b_local_vec)
+     type(problem_data) :: prob_data
+     type(numerics_data) :: num_data
+     type(element) :: elt
+     
+     Vec b_local_vec
+     PetscErrorCode ierr
+
+     integer :: nq,i,j,k
+
+     real(kind=dp), dimension(0:num_data%num_quadrature_nodes) :: qnodes,qweights
+     real(kind=dp) :: temp_val
+
+     nq = num_data%num_quadrature_nodes
+
+     call lglnodes(qnodes,qweights,nq)
+
+     !Initialize the vector
+     call VecSet(b_local_vec,0.0_dp,ierr)
+     temp_val = 0.0_dp
+
+     do i=1,4
+        temp_val = 0.0_dp
+        do j=0,nq
+           do k=0,nq
+              temp_val = temp_val + (qweights(j)*qweights(k)*&
+                           bilinear_basis(qnodes(j), qnodes(k),i)*&
+                           f(x(qnodes(j),elt),y(qnodes(k),elt))*&
+                           Jacobian(prob_data,num_data))
+           end do
+        end do
+        call VecSetValue(b_local_vec,i-1,temp_val,ADD_VALUES,ierr)
+     end do
+  end subroutine build_local_b_vec
+
+
 end module local_mat
