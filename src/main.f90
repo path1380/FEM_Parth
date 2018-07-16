@@ -36,7 +36,7 @@ program main
   !real(kind=dp), allocatable, dimension(:,:) :: A_global  
   real(kind=dp), allocatable, dimension(:) :: b_global,b_test,f_val,b_global_shell
 
-  integer :: num_divs_x,num_divs_y,num_nodes
+  integer :: num_divs_x,num_divs_y,num_nodes,num_elements
   
   !type(node) :: test_node
   !type(element) :: test_element,test_element1,test_element2,test_element3,test_element4
@@ -63,14 +63,15 @@ program main
   PetscErrorCode ierr
   !PetscBool flg
   !PetscOffset i_b,i_soln
-  PetscScalar tol,norm_delta_u,temp_norm
+  PetscScalar tol,norm_delta_u,temp_norm,norm_local_delta_u
 
   TYPE(MatCtx) :: ctxA
   !TYPE(MatCtx),POINTER :: ctxA_pt,ctxA1
 
   Vec b,soln,soln_iter,b_newton,soln_init,delta_u,soln_prev,temp_vec
-  Vec temp_op_arg,temp_ret_val
-  !Vec b_local
+  Vec local_delta_u,local_soln_iter,local_soln_prev,local_b_newton
+  !Vec temp_op_arg,temp_ret_val
+  Vec b_local
   Mat A,A_global_shell
   Mat A_local_shell
   !Mat A_local_petsc
@@ -78,7 +79,7 @@ program main
 
   !KSP ksp,ksp_iter
   KSP ksp_iter_shell
-  !KSP ksp_local_shell
+  KSP ksp_local_shell
   !PC pc
   PC pc_shell,pc_shell_local
 
@@ -155,10 +156,16 @@ program main
      num_divs_y = num_data_test%num_divs_y
 
      num_nodes = (num_divs_x+1)*(num_divs_y+1)
+     num_elements = num_divs_x*num_divs_y
 
      n = num_nodes
 
      call build_local_A(prob_data_test,num_data_test, A_local)
+
+     !do i=1,4
+     !   write(*,*) A_local(i,:)
+     !end do
+
 
      ctxA%local_matrix = A_local
      ctxA%prob = prob_data_test
@@ -184,8 +191,6 @@ program main
 
      call MatShellSetOperation(A_global_shell,MATOP_MULT,MyMult,ierr)
      call MatShellSetOperation(A_local_shell,MATOP_MULT,MyMult_local,ierr)
-
-
 
 !=====================Petsc declarations========================================
   
@@ -250,7 +255,7 @@ program main
      !   call VecAssemblyBegin(temp_op_arg,ierr)
      !   call VecAssemblyEnd(temp_op_arg,ierr)
 
-     !   call MyMult_local(A_local_shell,temp_op_arg,temp_ret_val,ierr)
+     !   call MatMult(A_local_shell,temp_op_arg,temp_ret_val,ierr)
 
      !   call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
@@ -259,9 +264,9 @@ program main
 
      !end do
 
-     do i=1,4
-        write(*,*) A_local(i,:)
-     end do
+     !do i=1,4
+     !   write(*,*) A_local(i,:)
+     !end do
 
 
 !====================Testing MyMult_local================================
@@ -285,22 +290,22 @@ program main
 
 !====================Testing local preconditioner========================
 
-     call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
-     call VecSetSizes(temp_op_arg,PETSC_DECIDE,4,ierr)
-     call VecSetFromOptions(temp_op_arg,ierr)
+     !call VecCreate(PETSC_COMM_WORLD,temp_op_arg,ierr)
+     !call VecSetSizes(temp_op_arg,PETSC_DECIDE,4,ierr)
+     !call VecSetFromOptions(temp_op_arg,ierr)
 
-     call VecSet(temp_op_arg,1.0_dp,ierr)
+     !call VecSet(temp_op_arg,1.0_dp,ierr)
 
-     call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
+     !call VecDuplicate(temp_op_arg,temp_ret_val,ierr)
 
-     call PCCreate(PETSC_COMM_WORLD,pc_shell_local,ierr)
-     call PCSetType(pc_shell_local,PCSHELL,ierr)
-     call PCShellSetContext(pc_shell_local,ctxA,ierr)
+     !call PCCreate(PETSC_COMM_WORLD,pc_shell_local,ierr)
+     !call PCSetType(pc_shell_local,PCSHELL,ierr)
+     !call PCShellSetContext(pc_shell_local,ctxA,ierr)
      !call PCShellSetApply(pc_shell,PC_Shell_Jacobi,ierr)
 
-     call PC_Shell_Jacobi_local(pc_shell_local,temp_op_arg,temp_ret_val,ierr)
+     !call PC_Shell_Jacobi_local(pc_shell_local,temp_op_arg,temp_ret_val,ierr)
      
-     call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_SELF,ierr)
+     !call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_SELF,ierr)
 
      
 
@@ -325,6 +330,16 @@ program main
      call VecDuplicate(b,delta_u,ierr)
      call VecDuplicate(b,soln_prev,ierr)
   !call VecDuplicate(b,temp_vec,ierr)
+
+  !Creating vectors for local iterative solution
+     call VecCreate(PETSC_COMM_WORLD,b_local,ierr)
+     call VecSetSizes(b_local,PETSC_DECIDE,4,ierr)
+     call VecSetFromOptions(b_local,ierr)
+     
+     call VecDuplicate(b_local,local_delta_u,ierr)
+     call VecDuplicate(b_local,local_soln_iter,ierr)
+     call VecDuplicate(b_local,local_soln_prev,ierr)
+     call VecDuplicate(b_local,local_b_newton,ierr)
 
   !Creating Petsc Matrix
      call MatCreate(PETSC_COMM_WORLD,A,ierr)
@@ -434,6 +449,9 @@ program main
      call VecCopy(soln_init,soln_iter,ierr)
 
      call VecSet(delta_u,1.0_dp,ierr)
+
+  !Assigning values to Parameters (Local Iterative Solution)
+     call VecSet(local_delta_u,1.0_dp,ierr)
   
 !===========Solving linear system directly=======================================
 
@@ -463,27 +481,34 @@ program main
 
 !     call KSPCreate(PETSC_COMM_WORLD,ksp_iter,ierr)
      call KSPCreate(PETSC_COMM_WORLD,ksp_iter_shell,ierr)
+     call KSPCreate(PETSC_COMM_WORLD,ksp_local_shell,ierr)
 
      call KSPSetOptionsPrefix(ksp_iter_shell,"shell_",ierr)
+     call KSPSetOptionsPrefix(ksp_local_shell,"shell_",ierr)
 
 !     call KSPSetOperators(ksp_iter,A,A,ierr)
      call KSPSetOperators(ksp_iter_shell,A_global_shell,A_global_shell,ierr)
-     !call KSPSetOperators(ksp_iter_shell,A_global_shell,A,ierr)
-     !call KSPSetOperators(ksp_iter_shell,A,A,ierr)
+     call KSPSetOperators(ksp_local_shell,A_local_shell,A_local_shell,ierr)
 
 !     call KSPSetType(ksp_iter,KSPCG,ierr)
      call KSPSetType(ksp_iter_shell,KSPCG,ierr)
+     call KSPSetType(ksp_local_shell,KSPCG,ierr)
 
 !     call KSPGetPC(ksp_iter,pc,ierr)
      call KSPGetPC(ksp_iter_shell,pc_shell,ierr)
+     call KSPGetPC(ksp_local_shell,pc_shell_local,ierr)
 
 !     call PCSetType(pc,PCJACOBI,ierr)
      !call PCSetType(pc_shell,PCJACOBI,ierr)
      call PCSetType(pc_shell,PCSHELL,ierr)
+     call PCSetType(pc_shell_local,PCSHELL,ierr)
+
      call PCShellSetContext(pc_shell,ctxA,ierr)
+     call PCShellSetContext(pc_shell_local,ctxA,ierr)
      
 !     call KSPSetFromOptions(ksp_iter,ierr)
      call KSPSetFromOptions(ksp_iter_shell,ierr)
+     call KSPSetFromOptions(ksp_local_shell,ierr)
 
 !Testing the preconditioner operator definition
 
@@ -498,8 +523,10 @@ program main
      !call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
      call PCShellSetApply(pc_shell,PC_Shell_Jacobi,ierr)
+     call PCShellSetApply(pc_shell_local,PC_Shell_Jacobi_local,ierr)
 
      call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
+     call VecNorm(local_delta_u,NORM_INFINITY,norm_local_delta_u,ierr)
 
      !Performing scaling outside the loop so that it doesn't repeat inside
      call VecScale(b,-1.0_dp,ierr)
@@ -632,6 +659,7 @@ program main
      !call KSPDestroy(ksp,ierr)
      !call KSPDestroy(ksp_iter,ierr)
      call KSPDestroy(ksp_iter_shell,ierr)
+     call KSPDestroy(ksp_local_shell,ierr)
      !call MatDestroy(A,ierr)
      call MatDestroy(A_global_shell,ierr)
      call VecDestroy(b,ierr)
