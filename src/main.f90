@@ -32,9 +32,12 @@ program main
   !real(kind=dp), dimension(4) :: b_local1,b_local2,b_local3,b_local4
   !real(kind=dp) :: test_x,test_y
   !real(kind=dp), dimension(4) :: b_local_test
+  real(kind=dp), dimension(4) :: local_soln
+  integer, dimension(4) :: loc_col_ind,elt_glonos
   
   !real(kind=dp), allocatable, dimension(:,:) :: A_global  
-  real(kind=dp), allocatable, dimension(:) :: b_global,b_test,f_val,b_global_shell
+  real(kind=dp), allocatable, dimension(:) :: b_global,f_val,b_global_shell
+  !real(kind=dp), allocatable, dimension(:) :: b_test
 
   integer :: num_divs_x,num_divs_y,num_nodes,num_elements
   
@@ -52,7 +55,7 @@ program main
 
 !LAPACK variables
 
-  integer, allocatable, dimension(:) :: IPIV
+  !integer, allocatable, dimension(:) :: IPIV
   !integer :: INFO
 
 !Petsc variables
@@ -63,27 +66,31 @@ program main
   PetscErrorCode ierr
   !PetscBool flg
   !PetscOffset i_b,i_soln
-  PetscScalar tol,norm_delta_u,temp_norm,norm_local_delta_u
+  PetscScalar tol,norm_local_delta_u
+  !PetscScalar norm_delta_u,temp_norm
 
   TYPE(MatCtx) :: ctxA
   !TYPE(MatCtx),POINTER :: ctxA_pt,ctxA1
 
-  Vec b,soln,soln_iter,b_newton,soln_init,delta_u,soln_prev,temp_vec
+  Vec b,soln_iter,b_newton,soln_init,delta_u,soln_prev,temp_vec
   Vec local_delta_u,local_soln_iter,local_soln_prev,local_b_newton
-  !Vec temp_op_arg,temp_ret_val
+  !Vec temp_op_arg,temp_ret_val,soln
   Vec b_local
-  Mat A,A_global_shell
+  Mat A
+  !Mat A_global_shell
   Mat A_local_shell
   !Mat A_local_petsc
   !Mat pshellmat
 
   !KSP ksp,ksp_iter
-  KSP ksp_iter_shell
+  !KSP ksp_iter_shell
   KSP ksp_local_shell
   !PC pc
-  PC pc_shell,pc_shell_local
+  !PC pc_shell
+  PC pc_shell_local
 
   !type(element) :: test_element
+  type(element) :: elt
 
 
   !PetscViewer viewer
@@ -147,7 +154,7 @@ program main
 
   big_loop_variable = 2
 
-!  do while(big_loop_variable <= 500)
+  do while(big_loop_variable <= 550)
 
      num_data_test%num_divs_x = big_loop_variable
      num_data_test%num_divs_y = big_loop_variable
@@ -172,8 +179,8 @@ program main
      ctxA%num = num_data_test
 
 
-     call MatCreateShell(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,&
-       &num_nodes,num_nodes,ctxA,A_global_shell,ierr)
+     !call MatCreateShell(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,&
+     !  &num_nodes,num_nodes,ctxA,A_global_shell,ierr)
 
      call MatCreateShell(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,&
        &4,4,ctxA,A_local_shell,ierr)
@@ -183,13 +190,14 @@ program main
      !call MatSetSizes(A_global_shell,PETSC_DECIDE,PETSC_DECIDE,num_nodes,num_nodes,ierr)
      !call MatSetFromOptions(A_global_shell,ierr)
      !call MatSetType(A_global_shell,MATSHELL,ierr)
-     call MatSetup(A_global_shell,ierr)
+
+     !call MatSetup(A_global_shell,ierr)
      call MatSetup(A_local_shell,ierr)
 
-     call MatShellSetContext(A_global_shell,ctxA,ierr)
+     !call MatShellSetContext(A_global_shell,ctxA,ierr)
      call MatShellSetContext(A_local_shell,ctxA,ierr)
 
-     call MatShellSetOperation(A_global_shell,MATOP_MULT,MyMult,ierr)
+     !call MatShellSetOperation(A_global_shell,MATOP_MULT,MyMult,ierr)
      call MatShellSetOperation(A_local_shell,MATOP_MULT,MyMult_local,ierr)
 
 !=====================Petsc declarations========================================
@@ -316,12 +324,16 @@ program main
         col_ind(i) = i
      end do
 
+     do i=1,4
+        loc_col_ind(i) = i-1
+     end do
+
   !Creating Petsc Vectors b and soln
      call VecCreate(PETSC_COMM_WORLD,b,ierr)
      call VecSetSizes(b,PETSC_DECIDE,n,ierr)
      call VecSetFromOptions(b,ierr)
 
-     call VecDuplicate(b,soln,ierr)
+  !   call VecDuplicate(b,soln,ierr)
 
   !Creating vectors for iterative solution
      call VecDuplicate(b,soln_iter,ierr)
@@ -329,7 +341,7 @@ program main
      call VecDuplicate(b,soln_init,ierr)
      call VecDuplicate(b,delta_u,ierr)
      call VecDuplicate(b,soln_prev,ierr)
-  !call VecDuplicate(b,temp_vec,ierr)
+     call VecDuplicate(b,temp_vec,ierr)
 
   !Creating vectors for local iterative solution
      call VecCreate(PETSC_COMM_WORLD,b_local,ierr)
@@ -364,12 +376,12 @@ program main
      allocate(qnodes(0:num_data_test%num_quadrature_nodes-1))
      allocate(qweights(0:num_data_test%num_quadrature_nodes-1))
 
-     allocate(b_test(num_nodes))
+  !   allocate(b_test(num_nodes))
 
      allocate(f_val(num_nodes))
   
 
-     allocate(IPIV(num_nodes))
+  !   allocate(IPIV(num_nodes))
 
   !test_node = solve_node(1, prob_data_test, num_data)
   !test_element1 = solve_element(6, prob_data_test, num_data_test)
@@ -384,7 +396,11 @@ program main
 
      !call build_global_matrices(A_global, b_global, prob_data_test, num_data_test)
 
-     call build_global_b(b_global_shell,prob_data_test,num_data_test)
+!========================Building global b===================================
+
+   !  call build_global_b(b_global_shell,prob_data_test,num_data_test)
+
+!========================Building global b===================================
 
   !write(*,*) MAXVAL(b_global_shell - b_global)
 
@@ -430,9 +446,9 @@ program main
 !=============Assigning values to vectors and Matrix===========================
 
   !Assigning values to RHS of linear system (Direct solution)
-     call VecSetValues(b,num_nodes,col_ind,b_global_shell,INSERT_VALUES,ierr)
-     call VecAssemblyBegin(b,ierr)
-     call VecAssemblyEnd(b,ierr)
+  !   call VecSetValues(b,num_nodes,col_ind,b_global_shell,INSERT_VALUES,ierr)
+  !   call VecAssemblyBegin(b,ierr)
+  !   call VecAssemblyEnd(b,ierr)
 
   !Assigning values to Matrix of linear system
   !   call MatSetValues(A,num_nodes,row_ind,num_nodes,col_ind,transpose(A_global),INSERT_VALUES,ierr)
@@ -480,34 +496,34 @@ program main
 !===========Solving linear system iteratively====================================
 
 !     call KSPCreate(PETSC_COMM_WORLD,ksp_iter,ierr)
-     call KSPCreate(PETSC_COMM_WORLD,ksp_iter_shell,ierr)
+!     call KSPCreate(PETSC_COMM_WORLD,ksp_iter_shell,ierr)
      call KSPCreate(PETSC_COMM_WORLD,ksp_local_shell,ierr)
 
-     call KSPSetOptionsPrefix(ksp_iter_shell,"shell_",ierr)
+!     call KSPSetOptionsPrefix(ksp_iter_shell,"shell_",ierr)
      call KSPSetOptionsPrefix(ksp_local_shell,"shell_",ierr)
 
 !     call KSPSetOperators(ksp_iter,A,A,ierr)
-     call KSPSetOperators(ksp_iter_shell,A_global_shell,A_global_shell,ierr)
+!     call KSPSetOperators(ksp_iter_shell,A_global_shell,A_global_shell,ierr)
      call KSPSetOperators(ksp_local_shell,A_local_shell,A_local_shell,ierr)
 
 !     call KSPSetType(ksp_iter,KSPCG,ierr)
-     call KSPSetType(ksp_iter_shell,KSPCG,ierr)
+!     call KSPSetType(ksp_iter_shell,KSPCG,ierr)
      call KSPSetType(ksp_local_shell,KSPCG,ierr)
 
 !     call KSPGetPC(ksp_iter,pc,ierr)
-     call KSPGetPC(ksp_iter_shell,pc_shell,ierr)
+!     call KSPGetPC(ksp_iter_shell,pc_shell,ierr)
      call KSPGetPC(ksp_local_shell,pc_shell_local,ierr)
 
 !     call PCSetType(pc,PCJACOBI,ierr)
      !call PCSetType(pc_shell,PCJACOBI,ierr)
-     call PCSetType(pc_shell,PCSHELL,ierr)
+!     call PCSetType(pc_shell,PCSHELL,ierr)
      call PCSetType(pc_shell_local,PCSHELL,ierr)
 
-     call PCShellSetContext(pc_shell,ctxA,ierr)
+!     call PCShellSetContext(pc_shell,ctxA,ierr)
      call PCShellSetContext(pc_shell_local,ctxA,ierr)
      
 !     call KSPSetFromOptions(ksp_iter,ierr)
-     call KSPSetFromOptions(ksp_iter_shell,ierr)
+!     call KSPSetFromOptions(ksp_iter_shell,ierr)
      call KSPSetFromOptions(ksp_local_shell,ierr)
 
 !Testing the preconditioner operator definition
@@ -522,19 +538,20 @@ program main
 
      !call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
-     call PCShellSetApply(pc_shell,PC_Shell_Jacobi,ierr)
+!     call PCShellSetApply(pc_shell,PC_Shell_Jacobi,ierr)
      call PCShellSetApply(pc_shell_local,PC_Shell_Jacobi_local,ierr)
 
-     call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
+!     call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
      call VecNorm(local_delta_u,NORM_INFINITY,norm_local_delta_u,ierr)
 
      !Performing scaling outside the loop so that it doesn't repeat inside
-     call VecScale(b,-1.0_dp,ierr)
+!     call VecScale(b,-1.0_dp,ierr)
 
      tol = 1e-4
 
      n_iter_newton = 0
 
+!Solving iteratively by Newton's method using assembled Global matrix
 !     do while (norm_delta_u > tol)
         !Copying soln of previous iteration to soln_prev
 !        call VecCopy(soln_iter,soln_prev,ierr)
@@ -576,20 +593,21 @@ program main
 
 !     write(*,*) log(dble(num_divs_x)),log(maxval(abs(b_global - f_val))) 
 
-     call VecSet(delta_u,1.0_dp,ierr)
-     call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
-     call VecCopy(soln_init,soln_iter,ierr)
+!     call VecSet(delta_u,1.0_dp,ierr)
+!     call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
+!     call VecCopy(soln_init,soln_iter,ierr)
 
      n_iter_newton = 0
 
-     do while (norm_delta_u > tol)
+!Solving iteratively by Newton's method using Global Shell matrix
+!     do while (norm_delta_u > tol)
         !Copying soln of previous iteration to soln_prev
-        call VecCopy(soln_iter,soln_prev,ierr)
+!        call VecCopy(soln_iter,soln_prev,ierr)
 
         !Performing the operation b_newton = - b + A*soln_prev
         !call MatMultAdd(A,soln_prev,b,b_newton,ierr)
-        call MyMult(A_global_shell,soln_prev,b_newton,ierr)
-        call VecAXPY(b_newton,1.0_dp,b,ierr)
+!        call MyMult(A_global_shell,soln_prev,b_newton,ierr)
+!        call VecAXPY(b_newton,1.0_dp,b,ierr)
 
         !call PCGetOperators(pc_shell,pshellmat,PETSC_NULL_MAT,ierr)
 
@@ -598,32 +616,96 @@ program main
         !call VecView(b,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
         !Performing the solve for delta_u
-        call KSPSolve(ksp_iter_shell,b_newton,delta_u,ierr)
+!        call KSPSolve(ksp_iter_shell,b_newton,delta_u,ierr)
 
         !call VecView(b_newton,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
         !Calculating soln = soln_prev - delta_u
-        call VecWAXPY(soln_iter,-1.0_dp,delta_u,soln_prev,ierr)
+!        call VecWAXPY(soln_iter,-1.0_dp,delta_u,soln_prev,ierr)
 
         !Calculating norm of delta_u
-        call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
+!        call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
 
-        n_iter_newton = n_iter_newton + 1
+!        n_iter_newton = n_iter_newton + 1
         !write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_delta_u
+!     end do
+
+!     call VecGetValues(soln_iter,num_nodes,col_ind,b_global,ierr)
+!     write(*,*) log(dble(num_divs_x)),log(maxval(abs(b_global - f_val)))
+
+     !call VecView(soln_iter,PETSC_VIEWER_STDOUT_WORLD,ierr)
+
+!Solving iteratively by Newton's method using Local Shell matrices
+     n_iter_newton = 0
+     call VecSet(local_delta_u,1.0_dp,ierr)
+     call VecSet(soln_iter,0.0_dp,ierr)
+
+   !Loop on element numbers
+     do i=1,num_elements
+
+   !     i=1
+
+        elt = solve_element(i,prob_data_test,num_data_test)
+        elt_glonos = elt%nodes%global_num
+
+        elt_glonos = elt_glonos - 1
+
+        !write(*,*) elt_glonos
+
+        call build_local_b_vec(prob_data_test, num_data_test, elt, b_local)
+
+        call VecGetValues(soln_init,4,elt_glonos,local_soln,ierr)
+        call VecSetValues(local_soln_iter,4,loc_col_ind,local_soln,INSERT_VALUES,ierr)
+        !call VecSet(local_soln_iter,0.0_dp,ierr)
+
+        call VecScale(b_local,-1.0_dp,ierr)
+
+        do while (norm_local_delta_u > tol)
+           !Copying soln of previous iteration to soln_prev
+           call VecCopy(local_soln_iter,local_soln_prev,ierr)
+
+           !Performing the operation b_newton = - b + A*soln_prev
+           call MyMult_local(A_local_shell,local_soln_prev,local_b_newton,ierr)
+           call VecAXPY(local_b_newton,1.0_dp,b_local,ierr)
+
+           !Performing the solve for delta_u
+           call KSPSolve(ksp_local_shell,local_b_newton,local_delta_u,ierr)
+
+           !Calculating soln = soln_prev - delta_u
+           call VecWAXPY(local_soln_iter,-1.0_dp,local_delta_u,local_soln_prev,ierr)
+
+           !Calculating norm of delta_u
+           call VecNorm(local_delta_u,NORM_INFINITY,norm_local_delta_u,ierr)
+
+           n_iter_newton = n_iter_newton + 1
+
+           !write(*,*) 'Iteration number',n_iter_newton,'Error =',norm_local_delta_u
+           !norm_local_delta_u = 0.0_dp
+        end do
+
+        call VecGetValues(local_soln_iter,4,loc_col_ind,local_soln,ierr)
+
+        !write(*,*) local_soln
+
+        call VecSetValues(soln_iter,4,elt_glonos,local_soln,INSERT_VALUES,ierr)
+        
+        norm_local_delta_u = 1.0_dp
+
      end do
 
-     call VecGetValues(soln_iter,num_nodes,col_ind,b_global,ierr)
+     !call VecView(soln_iter,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
+     call VecGetValues(soln_iter,num_nodes,col_ind,b_global,ierr)
      write(*,*) log(dble(num_divs_x)),log(maxval(abs(b_global - f_val))) 
 
      !call VecView(soln_iter,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
 
-     call VecCreate(PETSC_COMM_WORLD,temp_vec,ierr)
-     call VecSetSizes(temp_vec,PETSC_DECIDE,n,ierr)
-     call VecSetFromOptions(temp_vec,ierr)
-     call VecWAXPY(temp_vec,-1.0_dp,soln,soln_iter,ierr)
-     call VecNorm(temp_vec,NORM_INFINITY,temp_norm,ierr)
+     !call VecCreate(PETSC_COMM_WORLD,temp_vec,ierr)
+     !call VecSetSizes(temp_vec,PETSC_DECIDE,n,ierr)
+     !call VecSetFromOptions(temp_vec,ierr)
+     !call VecWAXPY(temp_vec,-1.0_dp,soln,soln_iter,ierr)
+     !call VecNorm(temp_vec,NORM_INFINITY,temp_norm,ierr)
      !write(*,*) 'Infinity norm of difference between direct and iterative solution is',temp_norm
 
      
@@ -648,9 +730,9 @@ program main
      deallocate(b_global_shell)
      deallocate(qnodes)
      deallocate(qweights)
-     deallocate(b_test)
+     !deallocate(b_test)
      deallocate(f_val)
-     deallocate(IPIV)
+     !deallocate(IPIV)
 
 !==============Deallocating Array Memory========================================
 
@@ -658,12 +740,12 @@ program main
 
      !call KSPDestroy(ksp,ierr)
      !call KSPDestroy(ksp_iter,ierr)
-     call KSPDestroy(ksp_iter_shell,ierr)
+     !call KSPDestroy(ksp_iter_shell,ierr)
      call KSPDestroy(ksp_local_shell,ierr)
      !call MatDestroy(A,ierr)
-     call MatDestroy(A_global_shell,ierr)
+     !call MatDestroy(A_global_shell,ierr)
      call VecDestroy(b,ierr)
-     call VecDestroy(soln,ierr)
+     !call VecDestroy(soln,ierr)
      call VecDestroy(soln_iter,ierr)
      call VecDestroy(b_newton,ierr)
      call VecDestroy(soln_init,ierr)
@@ -674,7 +756,7 @@ program main
 
      big_loop_variable = big_loop_variable*2
 
-!  end do
+  end do
 
   call PetscFinalize(ierr)
 
