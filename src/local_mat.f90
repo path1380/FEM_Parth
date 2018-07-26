@@ -193,6 +193,30 @@ contains
 
   end subroutine MyMult_local
 
+  subroutine libCEED_Mult(prob_data,num_data,op_arg,ret_val)
+
+     real(kind=dp), dimension(4) :: op_arg,ret_val
+     type(problem_data) :: prob_data
+     type(numerics_data) :: num_data
+
+     real(kind=dp), dimension(4,4) :: A_local
+     integer :: i,j
+
+     call build_local_A(prob_data,num_data,A_local)
+
+     !Initializing ret_val
+     do j=1,4
+        ret_val(j) = 0.0_dp
+     end do
+
+     do i=1,4
+        do j=1,4
+           ret_val(i) = ret_val(i) + (A_local(i,j)*op_arg(j))
+        end do
+     end do
+
+  end subroutine libCEED_Mult
+
   subroutine build_local_b_vec(prob_data, num_data, elt, b_local_vec)
      type(problem_data) :: prob_data
      type(numerics_data) :: num_data

@@ -132,14 +132,19 @@ contains
      type(numerics_data) :: num_data
 
      integer :: num_divs_x,num_divs_y,num_elements,num_nodes,num_quadrature_nodes
-     integer :: i,j,k,glo_i,glo_j
-     integer, dimension(1) :: glo_j_array
+     !integer :: i,j
+     integer :: k
+     !integer :: glo_i,glo_j
+     !integer, dimension(1) :: glo_j_array
+
+     integer, dimension(4) :: elt_glo_array
+     real(kind=dp), dimension(4) :: ue,re
 
      real(kind=dp), dimension(4,4) :: temp_A_local
 
      !Value in glo_ith row and glo_jth column of matrix represented by global_shell
-     real(kind=dp) :: global_shell_gloigloj,temp_val
-     real(kind=dp), dimension(1) :: temp_val_array
+     !real(kind=dp) :: global_shell_gloigloj,temp_val
+     !real(kind=dp), dimension(1) :: temp_val_array
 
      type(element) :: temp_element
      
@@ -155,7 +160,7 @@ contains
      num_elements = num_divs_x*num_divs_y
      num_nodes = (num_divs_x+1)*(num_divs_y+1)
 
-     global_shell_gloigloj = 0.0_dp
+!     global_shell_gloigloj = 0.0_dp
 
      !Initialize ret_val to 0 for adding values
      call VecSet(ret_val,0.0_dp,ierr)
@@ -168,20 +173,39 @@ contains
 
 !glo_i and glo_j are the global node numbers of nodes in element temp_element with local node numbers i and j.
 
-        do j=1,4
-           glo_j = temp_element%nodes(j)%global_num
-           glo_j_array(1) = glo_j-1
-           do i=1,4
-              glo_i = temp_element%nodes(i)%global_num
-              global_shell_gloigloj = temp_A_local(i,j)
-              call VecGetValues(op_arg,1,glo_j_array,temp_val_array,ierr)
-              temp_val = global_shell_gloigloj*temp_val_array(1)
-              call VecSetValue(ret_val,glo_i-1,temp_val,ADD_VALUES,ierr)
-!              ret_val(glo_i) = ret_val(glo_i) + (global_shell_gloigloj*op_arg(glo_j))
-           end do
-!           b_global(glo_j) = b_global(glo_j) + temp_b_local(j)
-        end do
+        elt_glo_array = temp_element%nodes%global_num
+        elt_glo_array = elt_glo_array - 1
+
+        !Step 1: Get values of op_arg corresponding to this element
+        call VecGetValues(op_arg,4,elt_glo_array,ue,ierr)
+
+        !Step 2: Compute re which is ret_val for the element
+        call libCEED_Mult(prob_data,num_data,ue,re)
+
+        !Step 3: Add re to ret_val
+        call VecSetValues(ret_val,4,elt_glo_array,re,ADD_VALUES,ierr)
      end do
+
+     !Initialize ret_val to 0 for adding values
+!     call VecSet(ret_val,0.0_dp,ierr)
+
+!     do k=1,num_elements
+!        temp_element = solve_element(k,prob_data,num_data)
+
+!        do j=1,4
+!           glo_j = temp_element%nodes(j)%global_num
+!           glo_j_array(1) = glo_j-1
+!           do i=1,4
+!              glo_i = temp_element%nodes(i)%global_num
+!              global_shell_gloigloj = temp_A_local(i,j)
+!              call VecGetValues(op_arg,1,glo_j_array,temp_val_array,ierr)
+!              temp_val = global_shell_gloigloj*temp_val_array(1)
+!              call VecSetValue(ret_val,glo_i-1,temp_val,ADD_VALUES,ierr)
+              !ret_val(glo_i) = ret_val(glo_i) + (global_shell_gloigloj*op_arg(glo_j))
+!           end do
+           !b_global(glo_j) = b_global(glo_j) + temp_b_local(j)
+!        end do
+!     end do
 
   end subroutine MyMult
 
