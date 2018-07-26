@@ -35,7 +35,8 @@ contains
 
      nq = num_data%num_quadrature_nodes
 
-     call lglnodes(qnodes,qweights,nq)
+     qnodes = num_data%nodes
+     qweights = num_data%weights
 
      do j=1,4
         do i=1,4

@@ -46,7 +46,7 @@ program main
   !type(node) :: test_node
   !type(element) :: test_element,test_element1,test_element2,test_element3,test_element4
 
-  integer :: i,nx,ny
+  integer :: i,nx,ny,nq
   !integer :: j
   integer :: big_loop_variable
   real(kind=dp) :: xi,yi,hx,hy,length,width
@@ -172,6 +172,17 @@ program main
      num_elements = num_divs_x*num_divs_y
 
      n = num_nodes
+     nq = num_data_test%num_quadrature_nodes
+
+     allocate(qnodes(0:nq))
+     allocate(qweights(0:nq))
+
+     allocate(num_data_test%nodes(0:nq))
+     allocate(num_data_test%weights(0:nq))
+
+     call lglnodes(qnodes,qweights,nq)
+     num_data_test%nodes = qnodes
+     num_data_test%weights = qweights
 
      call build_local_A(prob_data_test,num_data_test, A_local)
 
@@ -398,9 +409,7 @@ program main
 
      allocate(b_global(num_nodes))
      allocate(b_global_shell(num_nodes))
-     allocate(qnodes(0:num_data_test%num_quadrature_nodes-1))
-     allocate(qweights(0:num_data_test%num_quadrature_nodes-1))
-
+     
   !   allocate(b_test(num_nodes))
 
      allocate(f_val(num_nodes))
@@ -764,6 +773,8 @@ program main
      deallocate(b_global_shell)
      deallocate(qnodes)
      deallocate(qweights)
+     deallocate(num_data_test%nodes)
+     deallocate(num_data_test%weights)
      !deallocate(b_test)
      deallocate(f_val)
      !deallocate(IPIV)

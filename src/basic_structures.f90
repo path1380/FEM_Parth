@@ -20,6 +20,7 @@ module basic_structures
 
   type numerics_data
      integer :: num_divs_x,num_divs_y,num_quadrature_nodes
+     real(kind=dp), allocatable, dimension(:) :: nodes,weights
   end type numerics_data
 !contains
 end module basic_structures
