@@ -540,12 +540,12 @@ program main
 !     call KSPGetPC(ksp_local_shell,pc_shell_local,ierr)
 
 !     call PCSetType(pc,PCJACOBI,ierr)
-     !call PCSetType(pc_shell,PCJACOBI,ierr)
-     call PCSetType(pc_shell,PCSHELL,ierr)
+     call PCSetType(pc_shell,PCJACOBI,ierr)
+     !call PCSetType(pc_shell,PCSHELL,ierr)
 !     call PCSetType(pc_shell_local,PCSHELL,ierr)
 
-     call PCShellSetContext(pc_shell,ctxA,ierr)
-!     call PCShellSetContext(pc_shell_local,ctxA,ierr)
+!     call PCShellSetContext(pc_shell,ctxA,ierr)
+     !call PCShellSetContext(pc_shell_local,ctxA,ierr)
      
 !     call KSPSetFromOptions(ksp_iter,ierr)
      call KSPSetFromOptions(ksp_iter_shell,ierr)
@@ -563,7 +563,7 @@ program main
 
      !call VecView(temp_ret_val,PETSC_VIEWER_STDOUT_WORLD,ierr)
 
-     call PCShellSetApply(pc_shell,PC_Shell_Jacobi,ierr)
+!     call PCShellSetApply(pc_shell,PC_Shell_Jacobi,ierr)
      !call PCShellSetApply(pc_shell_local,PC_Shell_Jacobi_local,ierr)
 
      call VecNorm(delta_u,NORM_INFINITY,norm_delta_u,ierr)
